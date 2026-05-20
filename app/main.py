@@ -1,13 +1,25 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Body
+from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
 from app.models import LogIngestRequest, LogQueryParams, LogLevel, ServiceName
-from app.incident_models import IncidentSeverity, IncidentState
+from app.incident_models import IncidentSeverity, IncidentState, SuppressionRule
 from app.log_store import store
 from app.incident_engine import engine
 
 app = FastAPI(title="Tracium", description="Log Aggregation & Incident Correlation System")
+
+
+class FalsePositiveRequest(BaseModel):
+    reason: str
+    suppress_seconds: Optional[int] = 3600
+
+
+class SuppressionRequest(BaseModel):
+    pattern: str
+    seconds: int = 3600
+    reason: str
 
 
 @app.post("/logs/ingest")
@@ -78,6 +90,48 @@ async def update_incident_state(incident_id: str, state: IncidentState):
     if not success:
         return {"error": "Incident not found"}, 404
     return {"status": "ok", "incident_id": incident_id, "state": state.value}
+
+
+@app.post("/incidents/{incident_id}/false-positive")
+async def mark_false_positive(
+    incident_id: str,
+    body: FalsePositiveRequest = Body(...),
+):
+    incident_data = store.get_incident(incident_id)
+    if not incident_data:
+        return {"error": "Incident not found"}, 404
+
+    dedup_key = incident_data.get("deduplication_key")
+    if dedup_key:
+        engine.mark_false_positive(dedup_key, body.reason, body.suppress_seconds)
+
+    success = store.update_incident_state(incident_id, IncidentState.FALSE_POSITIVE)
+    if not success:
+        return {"error": "Failed to update incident state"}, 500
+
+    incident = store.get_incident(incident_id)
+    incident["false_positive_reason"] = body.reason
+    return {
+        "status": "ok",
+        "incident_id": incident_id,
+        "reason": body.reason,
+        "suppressed_for_seconds": body.suppress_seconds,
+    }
+
+
+@app.post("/suppressions")
+async def create_suppression(body: SuppressionRequest):
+    rule = engine.dedup.suppress(
+        pattern=body.pattern,
+        seconds=body.seconds,
+        reason=body.reason,
+    )
+    return {"status": "ok", "rule": rule.model_dump()}
+
+
+@app.get("/suppressions")
+async def get_suppressions():
+    return {"suppressions": engine.dedup.suppressions}
 
 
 @app.get("/alerts/security")

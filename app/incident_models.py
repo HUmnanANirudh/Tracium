@@ -28,6 +28,18 @@ class IncidentType(str, Enum):
     SECURITY_ALERT = "security_alert"
 
 
+class TimelineEntry(BaseModel):
+    timestamp: datetime
+    sequence: int
+    service: str
+    level: str
+    message: str
+    traceId: Optional[str] = None
+    userId: Optional[str] = None
+    ip: Optional[str] = None
+    metadata: dict = Field(default_factory=dict)
+
+
 class Incident(BaseModel):
     id: str
     type: IncidentType
@@ -42,6 +54,7 @@ class Incident(BaseModel):
     confidence_score: float = 1.0
     false_positive_reason: Optional[str] = None
     suppressed_until: Optional[datetime] = None
+    timeline: list[TimelineEntry] = Field(default_factory=list)
 
 
 class SecurityAlert(BaseModel):

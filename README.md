@@ -48,6 +48,20 @@ docker compose up
 
 Incidents within a 5-minute window are aggregated using type-specific dedup keys. 100 failed logins = 1 incident with `event_count: 100`.
 
+## False Positive Handling
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/incidents/{id}/false-positive` | Mark incident as FP + suppress future alerts |
+| POST | `/suppressions` | Create suppression rule manually |
+| GET | `/suppressions` | List active suppressions |
+
+## Confidence Score
+
+Each incident gets a `confidence_score` (0.0-1.0) based on:
+- Event severity (more attempts/higher counts = higher score)
+- FP history (degrades 30% per prior FP for that dedup key)
+
 ## API Endpoints
 
 | Method | Endpoint | Description |
@@ -55,9 +69,12 @@ Incidents within a 5-minute window are aggregated using type-specific dedup keys
 | POST | `/logs/ingest` | Ingest JSON logs |
 | GET | `/logs/query` | Query logs with filters |
 | GET | `/logs/services` | List available services |
-| GET | `/incidents` | List incidents |
+| GET | `/incidents` | List incidents (filter by state) |
 | GET | `/incidents/{id}` | Get incident details |
-| POST | `/incidents/{id}/resolve` | Resolve an incident |
+| PATCH | `/incidents/{id}/state` | Update incident state |
+| POST | `/incidents/{id}/false-positive` | Mark as false positive |
+| POST | `/suppressions` | Create suppression rule |
+| GET | `/suppressions` | List active suppressions |
 | GET | `/alerts/security` | Security alerts feed |
 | GET | `/health` | Health check |
 

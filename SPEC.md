@@ -69,6 +69,28 @@ Incidents are deduplicated within a 5-minute window using type-specific keys:
 
 Aggregated incidents track `event_count` to count correlated events.
 
+## False Positive Handling
+
+When an incident is marked as false positive:
+
+1. Incident state set to `FALSE_POSITIVE`
+2. `false_positive_reason` stored on incident
+3. Dedup key added to suppression list (default 1 hour)
+4. Future alerts with same dedup key are suppressed for the suppression window
+5. Confidence score for that dedup key is degraded (70% → 40% → 10% per subsequent FP)
+
+### Confidence Score
+
+Calculated per incident based on event severity and FP history:
+
+| Incident Type | High Confidence Trigger | Score Impact |
+|--------------|------------------------|--------------|
+| brute_force | 10+ attempts | -20% per FP |
+| error_spike | 20+ errors | -30% per FP |
+| latency_spike | p99 > 5s | -30% per FP |
+
+Score range: 0.0 - 1.0 (1.0 = highest confidence)
+
 ## Incident Rules
 
 | Rule | Description | Severity |

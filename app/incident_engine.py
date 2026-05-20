@@ -1,15 +1,18 @@
 from datetime import datetime, timedelta
 from collections import defaultdict
+from fnmatch import fnmatch
 from app.models import LogEntry, LogLevel, ServiceName
-from app.incident_models import Incident, IncidentSeverity, IncidentType, IncidentState, SecurityAlert
+from app.incident_models import Incident, IncidentSeverity, IncidentType, IncidentState, SecurityAlert, SuppressionRule
 
 
 DEDUP_WINDOW_SECS = 300
+SUPPRESSION_DEFAULT_SECS = 3600  # 1 hour default suppression
 
 
 class DeduplicationTracker:
     def __init__(self):
         self.active: dict[str, tuple[Incident, datetime]] = {}
+        self.suppressions: list[SuppressionRule] = []
 
     def get_key(self, incident_type: IncidentType, service: str, details: dict) -> str:
         if incident_type == IncidentType.BRUTE_FORCE:
@@ -23,6 +26,25 @@ class DeduplicationTracker:
         elif incident_type == IncidentType.CONTAINER_RESTART:
             return f"container_restart:{service}"
         return f"{incident_type.value}:{service}"
+
+    def is_suppressed(self, dedup_key: str) -> tuple[bool, str | None]:
+        now = datetime.utcnow()
+        self.suppressions = [s for s in self.suppressions if s.suppressed_until > now]
+
+        for rule in self.suppressions:
+            if fnmatch(dedup_key, rule.dedup_key_pattern):
+                return True, rule.reason
+        return False, None
+
+    def suppress(self, pattern: str, seconds: int, reason: str, created_by: str = "system"):
+        rule = SuppressionRule(
+            dedup_key_pattern=pattern,
+            suppressed_until=datetime.utcnow() + timedelta(seconds=seconds),
+            reason=reason,
+            created_by=created_by,
+        )
+        self.suppressions.append(rule)
+        return rule
 
     def try_aggregate(self, dedup_key: str, incident: Incident) -> tuple[bool, Incident | None]:
         now = datetime.utcnow()
@@ -56,6 +78,45 @@ class IncidentEngine:
         self.latency_samples: dict[str, list[float]] = defaultdict(list)
         self.restart_timestamps: dict[str, datetime] = {}
         self.dedup = DeduplicationTracker()
+        self.false_positive_history: dict[str, int] = defaultdict(int)
+
+    def calculate_confidence(self, incident: Incident, dedup_key: str) -> float:
+        base_score = 1.0
+
+        if incident.type == IncidentType.BRUTE_FORCE:
+            attempts = incident.details.get("attempts", 1)
+            if attempts >= 10:
+                base_score = 0.95
+            elif attempts >= 5:
+                base_score = 0.8
+
+        elif incident.type == IncidentType.ERROR_SPike:
+            count = incident.details.get("count", 1)
+            if count >= 20:
+                base_score = 0.9
+            elif count >= 10:
+                base_score = 0.75
+
+        elif incident.type == IncidentType.LATENCY_SPike:
+            p99 = incident.details.get("p99_ms", 0)
+            if p99 > 5000:
+                base_score = 0.9
+            elif p99 > 2000:
+                base_score = 0.7
+
+        fp_count = self.false_positive_history.get(dedup_key, 0)
+        if fp_count == 1:
+            base_score *= 0.7
+        elif fp_count == 2:
+            base_score *= 0.4
+        elif fp_count >= 3:
+            base_score *= 0.1
+
+        return round(base_score, 2)
+
+    def mark_false_positive(self, dedup_key: str, reason: str, suppress_seconds: int = SUPPRESSION_DEFAULT_SECS):
+        self.dedup.suppress(dedup_key, suppress_seconds, reason)
+        self.false_positive_history[dedup_key] += 1
 
     def check_brute_force(self, log: LogEntry) -> tuple[Incident | None, SecurityAlert | None, str | None]:
         if log.service != ServiceName.AUTH or log.level != LogLevel.ERROR:
@@ -64,6 +125,11 @@ class IncidentEngine:
             return None, None, None
 
         ip = log.ip or "unknown"
+        dedup_key = f"brute_force:auth:{ip}"
+
+        if self.dedup.is_suppressed(dedup_key)[0]:
+            return None, None, None
+
         now = datetime.utcnow()
         window = now - timedelta(minutes=5)
 
@@ -79,8 +145,9 @@ class IncidentEngine:
                 message=f"Brute force detected: {len(self.failed_logins[ip])} failed login attempts from {ip}",
                 timestamp=now,
                 details={"ip": ip, "attempts": len(self.failed_logins[ip]), "window": "5min"},
+                deduplication_key=dedup_key,
             )
-            dedup_key = f"brute_force:auth:{ip}"
+            incident.confidence_score = self.calculate_confidence(incident, dedup_key)
             self.failed_logins[ip] = []
 
             alert = SecurityAlert(
@@ -101,11 +168,15 @@ class IncidentEngine:
         if log.service != ServiceName.AUTH or log.level != LogLevel.ERROR:
             return None, None
 
-        hour = datetime.now().hour
+        dedup_key = f"auth_anomaly:auth:{log.userId or 'unknown'}"
+        if self.dedup.is_suppressed(dedup_key)[0]:
+            return None, None
+
+        hour = datetime.utcnow().hour
         is_off_hours = hour < 6 or hour > 22
 
         if is_off_hours and ("auth" in log.message.lower() or "token" in log.message.lower()):
-            now = datetime.now()
+            now = datetime.utcnow()
             incident = Incident(
                 id=f"auth-ano-{now.strftime('%Y%m%d%H%M%S')}",
                 type=IncidentType.AUTH_ANOMALY,
@@ -114,8 +185,9 @@ class IncidentEngine:
                 message=f"Off-hours authentication failure detected",
                 timestamp=now,
                 details={"hour": hour, "userId": log.userId},
+                deduplication_key=dedup_key,
             )
-            dedup_key = f"auth_anomaly:auth:{log.userId or 'unknown'}"
+            incident.confidence_score = self.calculate_confidence(incident, dedup_key)
             return incident, dedup_key
 
         return None, None
@@ -125,6 +197,11 @@ class IncidentEngine:
             return None, None
 
         service = str(log.service)
+        dedup_key = f"error_spike:{service}"
+
+        if self.dedup.is_suppressed(dedup_key)[0]:
+            return None, None
+
         now = datetime.utcnow()
         window = now - timedelta(minutes=1)
 
@@ -141,8 +218,9 @@ class IncidentEngine:
                 message=f"Error spike: {current_count} errors in last minute",
                 timestamp=now,
                 details={"count": current_count},
+                deduplication_key=dedup_key,
             )
-            dedup_key = f"error_spike:{service}"
+            incident.confidence_score = self.calculate_confidence(incident, dedup_key)
             return incident, dedup_key
 
         return None, None
@@ -152,6 +230,11 @@ class IncidentEngine:
             return None, None
 
         service = str(log.service)
+        dedup_key = f"latency_spike:{service}"
+
+        if self.dedup.is_suppressed(dedup_key)[0]:
+            return None, None
+
         now = datetime.utcnow()
 
         self.latency_samples[service].append(log.latencyMs)
@@ -171,15 +254,21 @@ class IncidentEngine:
                     message=f"Latency spike: p99={p99:.0f}ms exceeds 2000ms threshold",
                     timestamp=now,
                     details={"p99_ms": p99, "sample_size": len(self.latency_samples[service])},
+                    deduplication_key=dedup_key,
                 )
-                dedup_key = f"latency_spike:{service}"
+                incident.confidence_score = self.calculate_confidence(incident, dedup_key)
                 return incident, dedup_key
 
         return None, None
 
     def check_container_restart(self, log: LogEntry) -> tuple[Incident | None, str | None]:
         service = str(log.service)
-        now = datetime.now()
+        dedup_key = f"container_restart:{service}"
+
+        if self.dedup.is_suppressed(dedup_key)[0]:
+            return None, None
+
+        now = datetime.utcnow()
 
         if log.level == LogLevel.INFO and "started" in log.message.lower():
             if service in self.restart_timestamps:
@@ -193,8 +282,9 @@ class IncidentEngine:
                         message=f"Container restart detected for {service}",
                         timestamp=now,
                         details={"previous_start": prev.isoformat()},
+                        deduplication_key=dedup_key,
                     )
-                    dedup_key = f"container_restart:{service}"
+                    incident.confidence_score = self.calculate_confidence(incident, dedup_key)
                     self.restart_timestamps[service] = now
                     return incident, dedup_key
             self.restart_timestamps[service] = now
