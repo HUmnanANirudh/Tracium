@@ -1,8 +1,7 @@
 from datetime import datetime
-from collections import defaultdict
 from typing import Optional
-from app.models import LogEntry, LogLevel, LogQueryParams, ServiceName
-from app.incident_models import Incident, SecurityAlert
+from app.models import LogEntry, LogQueryParams, ServiceName
+from app.incident_models import Incident, IncidentState, SecurityAlert
 
 
 class LogStore:
@@ -52,14 +51,14 @@ class LogStore:
     def get_incidents(
         self,
         service: Optional[str] = None,
-        resolved: Optional[bool] = None,
+        state: Optional[str] = None,
         limit: int = 100,
     ) -> list[dict]:
         results = []
         for inc in reversed(self.incidents):
             if service and inc.service != service:
                 continue
-            if resolved is not None and inc.resolved != resolved:
+            if state and inc.state.value != state:
                 continue
             results.append(inc.model_dump(mode="json"))
             if len(results) >= limit:
@@ -80,10 +79,10 @@ class LogStore:
                 break
         return results
 
-    def resolve_incident(self, incident_id: str) -> bool:
+    def update_incident_state(self, incident_id: str, new_state: IncidentState) -> bool:
         for inc in self.incidents:
             if inc.id == incident_id:
-                inc.resolved = True
+                inc.state = new_state
                 return True
         return False
 

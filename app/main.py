@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.models import LogIngestRequest, LogQueryParams, LogLevel, ServiceName
+from app.incident_models import IncidentSeverity, IncidentState
 from app.log_store import store
 from app.incident_engine import engine
 
@@ -57,10 +58,10 @@ async def get_services():
 @app.get("/incidents")
 async def get_incidents(
     service: Optional[str] = None,
-    resolved: Optional[bool] = None,
+    state: Optional[str] = None,
     limit: int = Query(default=100, le=500),
 ):
-    return {"incidents": store.get_incidents(service=service, resolved=resolved, limit=limit)}
+    return {"incidents": store.get_incidents(service=service, state=state, limit=limit)}
 
 
 @app.get("/incidents/{incident_id}")
@@ -71,12 +72,12 @@ async def get_incident(incident_id: str):
     return {"incident": incident}
 
 
-@app.post("/incidents/{incident_id}/resolve")
-async def resolve_incident(incident_id: str):
-    success = store.resolve_incident(incident_id)
+@app.patch("/incidents/{incident_id}/state")
+async def update_incident_state(incident_id: str, state: IncidentState):
+    success = store.update_incident_state(incident_id, state)
     if not success:
         return {"error": "Incident not found"}, 404
-    return {"status": "resolved"}
+    return {"status": "ok", "incident_id": incident_id, "state": state.value}
 
 
 @app.get("/alerts/security")

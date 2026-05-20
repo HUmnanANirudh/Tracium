@@ -4,6 +4,14 @@ from typing import Optional
 from enum import Enum
 
 
+class IncidentState(str, Enum):
+    OPEN = "open"
+    INVESTIGATING = "investigating"
+    MITIGATED = "mitigated"
+    RESOLVED = "resolved"
+    FALSE_POSITIVE = "false_positive"
+
+
 class IncidentSeverity(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
@@ -24,11 +32,13 @@ class Incident(BaseModel):
     id: str
     type: IncidentType
     severity: IncidentSeverity
+    state: IncidentState = IncidentState.OPEN
     service: str
     message: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     details: dict = Field(default_factory=dict)
-    resolved: bool = False
+    event_count: int = 1
+    deduplication_key: Optional[str] = None
 
 
 class SecurityAlert(BaseModel):
