@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Mini SIEM-lite log aggregation and incident correlation system"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115.0",
+    "fastapi[standard]>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.0.0",
     "python-dateutil>=2.8.0",

@@ -2,8 +2,7 @@ from fastapi import FastAPI, Query
 from datetime import datetime
 from typing import Optional
 
-from app.models import LogEntry, LogIngestRequest, LogQueryParams, LogLevel, ServiceName
-from app.incident_models import IncidentSeverity
+from app.models import LogIngestRequest, LogQueryParams, LogLevel, ServiceName
 from app.log_store import store
 from app.incident_engine import engine
 
@@ -89,7 +88,7 @@ async def get_security_alerts(limit: int = Query(default=100, le=500)):
 async def health():
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now().isoformat(),
         "services": store.get_services(),
         "stats": {
             "total_logs": len(store.logs),
