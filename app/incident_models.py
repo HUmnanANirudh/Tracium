@@ -39,6 +39,9 @@ class Incident(BaseModel):
     details: dict = Field(default_factory=dict)
     event_count: int = 1
     deduplication_key: Optional[str] = None
+    confidence_score: float = 1.0
+    false_positive_reason: Optional[str] = None
+    suppressed_until: Optional[datetime] = None
 
 
 class SecurityAlert(BaseModel):
@@ -50,3 +53,11 @@ class SecurityAlert(BaseModel):
     message: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     details: dict = Field(default_factory=dict)
+
+
+class SuppressionRule(BaseModel):
+    dedup_key_pattern: str
+    suppressed_until: datetime
+    reason: str
+    created_by: str = "system"
+    created_at: datetime = Field(default_factory=datetime.utcnow)

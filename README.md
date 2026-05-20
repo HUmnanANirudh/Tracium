@@ -34,6 +34,20 @@ python services/log_generator.py 500
 docker compose up
 ```
 
+## Incident States
+
+| State | Description |
+|-------|-------------|
+| open | Newly created |
+| investigating | Under investigation |
+| mitigated | Mitigated |
+| resolved | Resolved |
+| false_positive | False positive |
+
+## Incident Deduplication
+
+Incidents within a 5-minute window are aggregated using type-specific dedup keys. 100 failed logins = 1 incident with `event_count: 100`.
+
 ## API Endpoints
 
 | Method | Endpoint | Description |

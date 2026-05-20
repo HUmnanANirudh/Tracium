@@ -47,6 +47,28 @@ A mini SIEM-lite system for centralized log aggregation, structured logging, inc
 }
 ```
 
+## Incident States
+
+- `OPEN` - Newly created, unacknowledged
+- `INVESTIGATING` - Under active investigation
+- `MITIGATED` - Mitigating actions applied
+- `RESOLVED` - Issue resolved
+- `FALSE_POSITIVE` - Marked as false positive
+
+## Incident Deduplication
+
+Incidents are deduplicated within a 5-minute window using type-specific keys:
+
+| Incident Type | Deduplication Key |
+|--------------|-------------------|
+| brute_force | `{type}:auth:{ip}` |
+| error_spike | `{type}:{service}` |
+| latency_spike | `{type}:{service}` |
+| auth_anomaly | `{type}:auth:{userId}` |
+| container_restart | `{type}:{service}` |
+
+Aggregated incidents track `event_count` to count correlated events.
+
 ## Incident Rules
 
 | Rule | Description | Severity |
