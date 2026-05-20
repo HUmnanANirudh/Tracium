@@ -2,17 +2,19 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from fnmatch import fnmatch
 from app.models import LogEntry, LogLevel, ServiceName
-from app.incident_models import Incident, IncidentSeverity, IncidentType, IncidentState, SecurityAlert, SuppressionRule
+from app.incident_models import Incident, IncidentSeverity, IncidentType, IncidentState, SecurityAlert, SuppressionRule, TimelineEntry
 
 
 DEDUP_WINDOW_SECS = 300
 SUPPRESSION_DEFAULT_SECS = 3600  # 1 hour default suppression
+TIMELINE_WINDOW_SECS = 300  # 5 minutes lookback for timeline reconstruction
 
 
 class DeduplicationTracker:
     def __init__(self):
         self.active: dict[str, tuple[Incident, datetime]] = {}
         self.suppressions: list[SuppressionRule] = []
+        self.timeline_events: dict[str, list[LogEntry]] = defaultdict(list)
 
     def get_key(self, incident_type: IncidentType, service: str, details: dict) -> str:
         if incident_type == IncidentType.BRUTE_FORCE:
@@ -46,6 +48,39 @@ class DeduplicationTracker:
         self.suppressions.append(rule)
         return rule
 
+    def add_timeline_event(self, dedup_key: str, log: LogEntry):
+        self.timeline_events[dedup_key].append(log)
+        self.cleanup_timeline()
+
+    def cleanup_timeline(self):
+        threshold = datetime.utcnow() - timedelta(seconds=TIMELINE_WINDOW_SECS)
+        for key in list(self.timeline_events.keys()):
+            self.timeline_events[key] = [
+                e for e in self.timeline_events[key]
+                if e.timestamp > threshold
+            ]
+            if not self.timeline_events[key]:
+                del self.timeline_events[key]
+
+    def get_timeline(self, dedup_key: str) -> list[TimelineEntry]:
+        events = self.timeline_events.get(dedup_key, [])
+        sorted_events = sorted(events, key=lambda e: e.timestamp)
+        entries = []
+        for seq, log in enumerate(sorted_events, start=1):
+            entry = TimelineEntry(
+                timestamp=log.timestamp,
+                sequence=seq,
+                service=str(log.service),
+                level=log.level.value,
+                message=log.message,
+                traceId=log.traceId,
+                userId=log.userId,
+                ip=log.ip,
+                metadata=log.metadata,
+            )
+            entries.append(entry)
+        return entries
+
     def try_aggregate(self, dedup_key: str, incident: Incident) -> tuple[bool, Incident | None]:
         now = datetime.utcnow()
         window = now - timedelta(seconds=DEDUP_WINDOW_SECS)
@@ -59,6 +94,7 @@ class DeduplicationTracker:
                         existing.details.get("count", 0),
                         incident.details.get("count", 0)
                     )
+                existing.timeline = self.get_timeline(dedup_key)
                 return True, existing
 
         self.active[dedup_key] = (incident, now)
@@ -69,6 +105,8 @@ class DeduplicationTracker:
         expired = [k for k, (_, t) in self.active.items() if t <= threshold]
         for k in expired:
             del self.active[k]
+            if k in self.timeline_events:
+                del self.timeline_events[k]
 
 
 class IncidentEngine:
@@ -118,6 +156,9 @@ class IncidentEngine:
         self.dedup.suppress(dedup_key, suppress_seconds, reason)
         self.false_positive_history[dedup_key] += 1
 
+    def build_timeline(self, dedup_key: str) -> list[TimelineEntry]:
+        return self.dedup.get_timeline(dedup_key)
+
     def check_brute_force(self, log: LogEntry) -> tuple[Incident | None, SecurityAlert | None, str | None]:
         if log.service != ServiceName.AUTH or log.level != LogLevel.ERROR:
             return None, None, None
@@ -129,6 +170,8 @@ class IncidentEngine:
 
         if self.dedup.is_suppressed(dedup_key)[0]:
             return None, None, None
+
+        self.dedup.add_timeline_event(dedup_key, log)
 
         now = datetime.utcnow()
         window = now - timedelta(minutes=5)
@@ -148,6 +191,7 @@ class IncidentEngine:
                 deduplication_key=dedup_key,
             )
             incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+            incident.timeline = self.build_timeline(dedup_key)
             self.failed_logins[ip] = []
 
             alert = SecurityAlert(
@@ -172,6 +216,8 @@ class IncidentEngine:
         if self.dedup.is_suppressed(dedup_key)[0]:
             return None, None
 
+        self.dedup.add_timeline_event(dedup_key, log)
+
         hour = datetime.utcnow().hour
         is_off_hours = hour < 6 or hour > 22
 
@@ -188,6 +234,7 @@ class IncidentEngine:
                 deduplication_key=dedup_key,
             )
             incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+            incident.timeline = self.build_timeline(dedup_key)
             return incident, dedup_key
 
         return None, None
@@ -201,6 +248,8 @@ class IncidentEngine:
 
         if self.dedup.is_suppressed(dedup_key)[0]:
             return None, None
+
+        self.dedup.add_timeline_event(dedup_key, log)
 
         now = datetime.utcnow()
         window = now - timedelta(minutes=1)
@@ -221,6 +270,7 @@ class IncidentEngine:
                 deduplication_key=dedup_key,
             )
             incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+            incident.timeline = self.build_timeline(dedup_key)
             return incident, dedup_key
 
         return None, None
@@ -234,6 +284,8 @@ class IncidentEngine:
 
         if self.dedup.is_suppressed(dedup_key)[0]:
             return None, None
+
+        self.dedup.add_timeline_event(dedup_key, log)
 
         now = datetime.utcnow()
 
@@ -257,6 +309,7 @@ class IncidentEngine:
                     deduplication_key=dedup_key,
                 )
                 incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+                incident.timeline = self.build_timeline(dedup_key)
                 return incident, dedup_key
 
         return None, None
@@ -267,6 +320,8 @@ class IncidentEngine:
 
         if self.dedup.is_suppressed(dedup_key)[0]:
             return None, None
+
+        self.dedup.add_timeline_event(dedup_key, log)
 
         now = datetime.utcnow()
 
@@ -285,6 +340,7 @@ class IncidentEngine:
                         deduplication_key=dedup_key,
                     )
                     incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+                    incident.timeline = self.build_timeline(dedup_key)
                     self.restart_timestamps[service] = now
                     return incident, dedup_key
             self.restart_timestamps[service] = now

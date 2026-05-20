@@ -62,6 +62,25 @@ Each incident gets a `confidence_score` (0.0-1.0) based on:
 - Event severity (more attempts/higher counts = higher score)
 - FP history (degrades 30% per prior FP for that dedup key)
 
+## Timeline Reconstruction
+
+Incidents include a `timeline` array of correlated log events:
+```json
+{"timeline": [
+  {"sequence": 1, "timestamp": "10:01", "service": "auth", "level": "error", "message": "Login failed"},
+  {"sequence": 2, "timestamp": "10:02", "service": "auth", "level": "error", "message": "Login failed"}
+]}
+```
+
+## Rate Limiting
+
+| Limit | Value |
+|-------|-------|
+| Max payload | 1MB |
+| Max logs/request | 1000 |
+| Max requests/min | 60 |
+| Max logs/min | 5000 |
+
 ## API Endpoints
 
 | Method | Endpoint | Description |

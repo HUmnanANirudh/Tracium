@@ -91,6 +91,36 @@ Calculated per incident based on event severity and FP history:
 
 Score range: 0.0 - 1.0 (1.0 = highest confidence)
 
+## Timeline Reconstruction
+
+Each incident includes a `timeline` array showing correlated log events leading up to and including the incident trigger:
+
+```json
+{
+  "timeline": [
+    {"sequence": 1, "timestamp": "10:01:00", "service": "auth", "level": "error", "message": "Login failed"},
+    {"sequence": 2, "timestamp": "10:02:00", "service": "auth", "level": "error", "message": "Login failed"},
+    {"sequence": 3, "timestamp": "10:03:00", "service": "backend", "level": "warning", "message": "Privilege escalation"},
+    {"sequence": 4, "timestamp": "10:04:00", "service": "worker", "level": "error", "message": "Crypto miner detected"}
+  ]
+}
+```
+
+Timeline captures all events within a 5-minute window before incident creation.
+
+## Rate Limiting
+
+The ingest endpoint is protected against abuse:
+
+| Limit | Value |
+|-------|-------|
+| Max payload size | 1MB |
+| Max logs per request | 1000 |
+| Max requests per minute | 60 |
+| Max logs per minute | 5000 |
+
+Returns `413` for oversized payloads, `429` for rate limit exceeded.
+
 ## Incident Rules
 
 | Rule | Description | Severity |
