@@ -30,7 +30,7 @@ class DeduplicationTracker:
         return f"{incident_type.value}:{service}"
 
     def is_suppressed(self, dedup_key: str) -> tuple[bool, str | None]:
-        now = datetime.utcnow()
+        now = datetime.now()
         self.suppressions = [s for s in self.suppressions if s.suppressed_until > now]
 
         for rule in self.suppressions:
@@ -41,7 +41,7 @@ class DeduplicationTracker:
     def suppress(self, pattern: str, seconds: int, reason: str, created_by: str = "system"):
         rule = SuppressionRule(
             dedup_key_pattern=pattern,
-            suppressed_until=datetime.utcnow() + timedelta(seconds=seconds),
+            suppressed_until=datetime.now() + timedelta(seconds=seconds),
             reason=reason,
             created_by=created_by,
         )
@@ -53,7 +53,7 @@ class DeduplicationTracker:
         self.cleanup_timeline()
 
     def cleanup_timeline(self):
-        threshold = datetime.utcnow() - timedelta(seconds=TIMELINE_WINDOW_SECS)
+        threshold = datetime.now() - timedelta(seconds=TIMELINE_WINDOW_SECS)
         for key in list(self.timeline_events.keys()):
             self.timeline_events[key] = [
                 e for e in self.timeline_events[key]
@@ -82,7 +82,7 @@ class DeduplicationTracker:
         return entries
 
     def try_aggregate(self, dedup_key: str, incident: Incident) -> tuple[bool, Incident | None]:
-        now = datetime.utcnow()
+        now = datetime.now()
         window = now - timedelta(seconds=DEDUP_WINDOW_SECS)
 
         if dedup_key in self.active:
@@ -173,7 +173,7 @@ class IncidentEngine:
 
         self.dedup.add_timeline_event(dedup_key, log)
 
-        now = datetime.utcnow()
+        now = datetime.now()
         window = now - timedelta(minutes=5)
 
         self.failed_logins[ip] = [t for t in self.failed_logins[ip] if t > window]
@@ -218,11 +218,11 @@ class IncidentEngine:
 
         self.dedup.add_timeline_event(dedup_key, log)
 
-        hour = datetime.utcnow().hour
+        hour = datetime.now().hour
         is_off_hours = hour < 6 or hour > 22
 
         if is_off_hours and ("auth" in log.message.lower() or "token" in log.message.lower()):
-            now = datetime.utcnow()
+            now = datetime.now()
             incident = Incident(
                 id=f"auth-ano-{now.strftime('%Y%m%d%H%M%S')}",
                 type=IncidentType.AUTH_ANOMALY,
@@ -251,7 +251,7 @@ class IncidentEngine:
 
         self.dedup.add_timeline_event(dedup_key, log)
 
-        now = datetime.utcnow()
+        now = datetime.now()
         window = now - timedelta(minutes=1)
 
         self.error_counts[service] = [(t, c) for t, c in self.error_counts[service] if t > window]
@@ -287,7 +287,7 @@ class IncidentEngine:
 
         self.dedup.add_timeline_event(dedup_key, log)
 
-        now = datetime.utcnow()
+        now = datetime.now()
 
         self.latency_samples[service].append(log.latencyMs)
         if len(self.latency_samples[service]) > 100:
@@ -323,7 +323,7 @@ class IncidentEngine:
 
         self.dedup.add_timeline_event(dedup_key, log)
 
-        now = datetime.utcnow()
+        now = datetime.now()
 
         if log.level == LogLevel.INFO and "started" in log.message.lower():
             if service in self.restart_timestamps:

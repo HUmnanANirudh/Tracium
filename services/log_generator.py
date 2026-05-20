@@ -107,7 +107,7 @@ def generate_log(service: str, level: str = None) -> dict:
     log = {
         "service": service,
         "level": level,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now().isoformat() + "Z",
         "message": message,
         "traceId": generate_trace_id(),
         "metadata": {},
@@ -133,7 +133,7 @@ def generate_failed_auth_log() -> dict:
     return {
         "service": "auth",
         "level": "error",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now().isoformat() + "Z",
         "message": random.choice([
             "JWT validation failed",
             "Invalid credentials",

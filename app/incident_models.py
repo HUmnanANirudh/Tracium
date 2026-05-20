@@ -47,7 +47,7 @@ class Incident(BaseModel):
     state: IncidentState = IncidentState.OPEN
     service: str
     message: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime.now)
     details: dict = Field(default_factory=dict)
     event_count: int = 1
     deduplication_key: Optional[str] = None
@@ -64,7 +64,7 @@ class SecurityAlert(BaseModel):
     sourceIp: str
     userId: Optional[str] = None
     message: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime.now)
     details: dict = Field(default_factory=dict)
 
 
@@ -73,4 +73,4 @@ class SuppressionRule(BaseModel):
     suppressed_until: datetime
     reason: str
     created_by: str = "system"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.now)

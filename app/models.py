@@ -22,7 +22,7 @@ class ServiceName(str, Enum):
 class LogEntry(BaseModel):
     service: ServiceName
     level: LogLevel
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime.now)
     message: str
     userId: Optional[str] = None
     ip: Optional[str] = None
