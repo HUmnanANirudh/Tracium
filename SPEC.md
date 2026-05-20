@@ -9,7 +9,7 @@ A mini SIEM-lite system for centralized log aggregation, structured logging, inc
 - **API**: FastAPI (Python)
 - **Log Aggregation**: Loki (via Promtail log files)
 - **Visualization**: Grafana
-- **Container Orchestration**: Docker Compose
+- **Orchestration**: Docker Compose
 
 ## Architecture
 
@@ -36,7 +36,7 @@ app/
 │       ├── __init__.py     # Route exports
 │       ├── alerts.py       # Security alerts endpoint
 │       ├── health.py       # Health check endpoint
-│       ├── incidents.py    # Incident CRUD + false positive
+│       ├── incidents.py    # Incident CRUD + investigation
 │       ├── ingest.py       # Log ingestion + rate limiting
 │       ├── logs.py         # Log querying
 │       └── suppressions.py # Suppression rule management
@@ -78,6 +78,36 @@ app/
 - `MITIGATED` - Mitigating actions applied
 - `RESOLVED` - Issue resolved
 - `FALSE_POSITIVE` - Marked as false positive
+
+## Investigation Features
+
+Each incident supports a complete investigation workflow:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/incidents/{id}` | Initial incident details |
+| GET | `/incidents/{id}/timeline` | Ordered sequence of correlated events |
+| GET | `/incidents/{id}/related-logs` | All logs tied to incident (IP, userId, traceId) |
+| GET | `/incidents/{id}/root-cause` | Root cause analysis + recommended actions |
+
+### Timeline
+
+Returns ordered sequence of events that triggered/contributed to the incident.
+
+### Related Logs
+
+Returns logs correlated by:
+- Same dedup key (IP for brute_force, userId for auth_anomaly)
+- Same service
+- Same traceId (if available)
+
+### Root Cause Analysis
+
+Returns structured analysis including:
+- `initial_event`: First event in the chain
+- `contributing_factors`: What enabled the incident
+- `impact_assessment`: Risk levels for account/lateral/data impact
+- `recommended_actions`: Concrete steps to resolve and prevent
 
 ## Incident Deduplication
 
@@ -172,6 +202,9 @@ Returns `413` for oversized payloads, `429` for rate limit exceeded.
 | GET | `/incidents/{id}` | Get incident details |
 | PATCH | `/incidents/{id}/state` | Update incident state |
 | POST | `/incidents/{id}/false-positive` | Mark as false positive |
+| GET | `/incidents/{id}/timeline` | Get incident timeline |
+| GET | `/incidents/{id}/related-logs` | Get related logs |
+| GET | `/incidents/{id}/root-cause` | Get root cause analysis |
 | POST | `/suppressions` | Create suppression rule |
 | GET | `/suppressions` | List active suppressions |
 | GET | `/alerts/security` | Security alerts feed |
@@ -184,3 +217,8 @@ Returns `413` for oversized payloads, `429` for rate limit exceeded.
 - Timeline analysis
 - Incident timeline
 - Security alert feed
+
+## Documentation
+
+- [`docs/security-story.md`](docs/security-story.md) - Complete attack scenario with investigation workflow
+- [`docs/limitations.md`](docs/limitations.md) - Known limitations and future improvements

@@ -5,6 +5,9 @@ from app.api.routes.incidents import (
     get_incident,
     update_incident_state,
     mark_false_positive,
+    get_incident_timeline,
+    get_incident_related_logs,
+    get_incident_root_cause,
 )
 from app.api.routes.suppressions import create_suppression, get_suppressions
 from app.api.routes.alerts import get_security_alerts
@@ -18,6 +21,9 @@ __all__ = [
     "get_incident",
     "update_incident_state",
     "mark_false_positive",
+    "get_incident_timeline",
+    "get_incident_related_logs",
+    "get_incident_root_cause",
     "create_suppression",
     "get_suppressions",
     "get_security_alerts",

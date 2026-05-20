@@ -17,18 +17,18 @@ app/
 │   ├── middleware.py        # Payload size limiting
 │   └── routes/
 │       ├── alerts.py       # Security alerts
-│       ├── health.py       # Health check
-│       ├── incidents.py    # Incident CRUD + false positive
+│       ├── health.py        # Health check
+│       ├── incidents.py     # Incident CRUD + investigation
 │       ├── ingest.py       # Log ingestion + rate limiting
-│       ├── logs.py         # Log querying
-│       └── suppressions.py # Suppression rules
+│       ├── logs.py          # Log querying
+│       └── suppressions.py  # Suppression rules
 ├── core/
 │   └── config.py           # RateLimitConfig + RateLimiter
-├── incident_engine.py       # Correlation rules engine
+├── incident_engine.py      # Correlation rules engine
 ├── incident_models.py      # Incident/Alert models
 ├── log_store.py           # In-memory log store
-├── models.py             # Log entry models
-└── main.py              # Route wiring only
+├── models.py              # Log entry models
+└── main.py                 # Route wiring only
 ```
 
 ## Quick Start
@@ -46,6 +46,22 @@ python services/log_generator.py 500
 # Run with Docker Compose (Loki + Grafana + API)
 docker compose up
 ```
+
+## API Documentation
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+## Investigation Features
+
+Each incident has dedicated investigation endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/incidents/{id}` | Initial incident details |
+| GET | `/incidents/{id}/timeline` | Attack progression timeline |
+| GET | `/incidents/{id}/related-logs` | All logs correlated to incident |
+| GET | `/incidents/{id}/root-cause` | Root cause analysis + recommended actions |
 
 ## Services
 
@@ -103,7 +119,7 @@ Incidents include a `timeline` array of correlated log events:
 | Max requests/min | 60 |
 | Max logs/min | 5000 |
 
-## API Endpoints
+## Full API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -114,6 +130,9 @@ Incidents include a `timeline` array of correlated log events:
 | GET | `/incidents/{id}` | Get incident details |
 | PATCH | `/incidents/{id}/state` | Update incident state |
 | POST | `/incidents/{id}/false-positive` | Mark as false positive |
+| GET | `/incidents/{id}/timeline` | Get incident timeline |
+| GET | `/incidents/{id}/related-logs` | Get related logs |
+| GET | `/incidents/{id}/root-cause` | Get root cause analysis |
 | POST | `/suppressions` | Create suppression rule |
 | GET | `/suppressions` | List active suppressions |
 | GET | `/alerts/security` | Security alerts feed |
@@ -143,6 +162,14 @@ Incidents include a `timeline` array of correlated log events:
 | latency_spike | p99 latency > 2s | MEDIUM |
 | container_restart | Service restart within 5min | LOW |
 
+## Security Story
+
+See [`docs/security-story.md`](docs/security-story.md) for a complete attack scenario demonstrating:
+
+- Multi-stage attack correlation (brute force → shell → exfiltration)
+- Investigation flow with timeline, related logs, and root cause analysis
+- Incident state transitions and recommended actions
+
 ## Grafana Dashboard
 
 Access Grafana at `http://localhost:3000` (admin/admin) for:
@@ -161,3 +188,14 @@ Access Grafana at `http://localhost:3000` (admin/admin) for:
 | Loki | 3100 |
 | Grafana | 3000 |
 | Promtail | 9080 |
+
+## Limitations
+
+See [`docs/limitations.md`](docs/limitations.md) for known limitations:
+
+- Loki not ideal for deep analytics
+- No ML anomaly detection
+- Single-node architecture
+- Simulated environment (no real integrations)
+- No distributed consensus
+- Limited retention (in-memory only)
