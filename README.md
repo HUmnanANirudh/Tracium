@@ -9,14 +9,27 @@ Mini SIEM-lite — centralized log aggregation and incident correlation system.
 - **Visualization**: Grafana
 - **Orchestration**: Docker Compose
 
-## Services
+## Project Structure
 
-| Service | Description |
-|---------|-------------|
-| frontend | Web frontend logs |
-| backend | API backend logs |
-| auth | Authentication service logs |
-| worker | Background worker logs |
+```
+app/
+├── api/
+│   ├── middleware.py        # Payload size limiting
+│   └── routes/
+│       ├── alerts.py       # Security alerts
+│       ├── health.py       # Health check
+│       ├── incidents.py    # Incident CRUD + false positive
+│       ├── ingest.py       # Log ingestion + rate limiting
+│       ├── logs.py         # Log querying
+│       └── suppressions.py # Suppression rules
+├── core/
+│   └── config.py           # RateLimitConfig + RateLimiter
+├── incident_engine.py       # Correlation rules engine
+├── incident_models.py      # Incident/Alert models
+├── log_store.py           # In-memory log store
+├── models.py             # Log entry models
+└── main.py              # Route wiring only
+```
 
 ## Quick Start
 
@@ -33,6 +46,15 @@ python services/log_generator.py 500
 # Run with Docker Compose (Loki + Grafana + API)
 docker compose up
 ```
+
+## Services
+
+| Service | Description |
+|---------|-------------|
+| frontend | Web frontend logs |
+| backend | API backend logs |
+| auth | Authentication service logs |
+| worker | Background worker logs |
 
 ## Incident States
 

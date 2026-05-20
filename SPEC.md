@@ -25,6 +25,30 @@ A mini SIEM-lite system for centralized log aggregation, structured logging, inc
   FastAPI Incident Engine
 ```
 
+## Project Structure
+
+```
+app/
+├── api/
+│   ├── __init__.py
+│   ├── middleware.py       # Payload size limiting
+│   └── routes/
+│       ├── __init__.py     # Route exports
+│       ├── alerts.py       # Security alerts endpoint
+│       ├── health.py       # Health check endpoint
+│       ├── incidents.py    # Incident CRUD + false positive
+│       ├── ingest.py       # Log ingestion + rate limiting
+│       ├── logs.py         # Log querying
+│       └── suppressions.py # Suppression rule management
+├── core/
+│   └── config.py          # RateLimitConfig + RateLimiter
+├── incident_engine.py    # IncidentEngine (correlation rules)
+├── incident_models.py    # Incident, SecurityAlert, SuppressionRule, TimelineEntry
+├── log_store.py          # LogStore (in-memory storage)
+├── models.py             # LogEntry, LogIngestRequest, LogQueryParams
+└── main.py               # Route wiring only
+```
+
 ## Services
 
 1. **frontend** - Web frontend logs
@@ -36,12 +60,12 @@ A mini SIEM-lite system for centralized log aggregation, structured logging, inc
 
 ```json
 {
-  "service": "auth-service",
+  "service": "auth",
   "level": "error",
   "timestamp": "2026-05-20T10:30:00Z",
+  "message": "JWT validation failed",
   "userId": "123",
   "ip": "192.168.1.100",
-  "message": "JWT validation failed",
   "traceId": "abc123",
   "metadata": {}
 }
@@ -61,11 +85,11 @@ Incidents are deduplicated within a 5-minute window using type-specific keys:
 
 | Incident Type | Deduplication Key |
 |--------------|-------------------|
-| brute_force | `{type}:auth:{ip}` |
-| error_spike | `{type}:{service}` |
-| latency_spike | `{type}:{service}` |
-| auth_anomaly | `{type}:auth:{userId}` |
-| container_restart | `{type}:{service}` |
+| brute_force | `brute_force:auth:{ip}` |
+| error_spike | `error_spike:{service}` |
+| latency_spike | `latency_spike:{service}` |
+| auth_anomaly | `auth_anomaly:auth:{userId}` |
+| container_restart | `container_restart:{service}` |
 
 Aggregated incidents track `event_count` to count correlated events.
 
@@ -126,7 +150,7 @@ Returns `413` for oversized payloads, `429` for rate limit exceeded.
 | Rule | Description | Severity |
 |------|-------------|----------|
 | brute_force | 5+ failed logins in 5 min from same IP | HIGH |
-| auth_anomaly | Unusual auth failure pattern | MEDIUM |
+| auth_anomaly | Off-hours auth failure | MEDIUM |
 | error_spike | 10+ errors in 1 min | HIGH |
 | latency_spike | p99 latency > 2s | MEDIUM |
 | container_restart | Service restart detected | LOW |
@@ -139,13 +163,19 @@ Returns `413` for oversized payloads, `429` for rate limit exceeded.
 
 ## API Endpoints
 
-- `POST /logs/ingest` - Ingest logs from services
-- `GET /logs/query` - Query logs with filters
-- `GET /logs/services` - List services
-- `GET /incidents` - List active incidents
-- `GET /incidents/{id}` - Incident details
-- `GET /alerts/security` - Security alerts
-- `GET /health` - Health check
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/logs/ingest` | Ingest JSON logs |
+| GET | `/logs/query` | Query logs with filters |
+| GET | `/logs/services` | List services |
+| GET | `/incidents` | List incidents (filter by state) |
+| GET | `/incidents/{id}` | Get incident details |
+| PATCH | `/incidents/{id}/state` | Update incident state |
+| POST | `/incidents/{id}/false-positive` | Mark as false positive |
+| POST | `/suppressions` | Create suppression rule |
+| GET | `/suppressions` | List active suppressions |
+| GET | `/alerts/security` | Security alerts feed |
+| GET | `/health` | Health check |
 
 ## Dashboard Features
 

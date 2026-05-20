@@ -6,8 +6,8 @@ from app.incident_models import Incident, IncidentSeverity, IncidentType, Incide
 
 
 DEDUP_WINDOW_SECS = 300
-SUPPRESSION_DEFAULT_SECS = 3600  # 1 hour default suppression
-TIMELINE_WINDOW_SECS = 300  # 5 minutes lookback for timeline reconstruction
+SUPPRESSION_DEFAULT_SECS = 3600 
+TIMELINE_WINDOW_SECS = 300
 
 
 class DeduplicationTracker:
