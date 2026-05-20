@@ -1,0 +1,15 @@
+{
+  "apiVersion": 1,
+  "providers": [
+    {
+      "folder": "",
+      "name": "Tracium Dashboards",
+      "options": [
+        {
+          "path": "/etc/grafana/provisioning/dashboards"
+        }
+      ],
+      "type": "file"
+    }
+  ]
+}
