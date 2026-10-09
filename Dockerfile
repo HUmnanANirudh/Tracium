@@ -7,6 +7,7 @@ RUN pip install uv && uv sync
 
 COPY app ./app
 COPY scripts ./scripts
+COPY data ./data
 
 EXPOSE 8000
 

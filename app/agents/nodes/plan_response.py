@@ -7,7 +7,7 @@ from app.agents.models import ResponseProposal
 def plan_response_node(state: InvestigationState) -> dict:
     # Read playbooks
     playbooks = ""
-    playbooks_dir = "/home/anni/Desktop/Tracium/data/playbooks"
+    playbooks_dir = os.getenv("PLAYBOOKS_DIR", "data/playbooks")
     if os.path.exists(playbooks_dir):
         for filename in os.listdir(playbooks_dir):
             if filename.endswith(".md"):

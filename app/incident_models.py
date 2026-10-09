@@ -25,6 +25,8 @@ class IncidentType(str, Enum):
     ERROR_SPike = "error_spike"
     LATENCY_SPike = "latency_spike"
     CONTAINER_RESTART = "container_restart"
+    SQL_INJECTION = "sql_injection"
+    CRYPTOMINING = "cryptomining"
     SECURITY_ALERT = "security_alert"
 
 

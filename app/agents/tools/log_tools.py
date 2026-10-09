@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 from langchain_core.tools import tool
 from datetime import datetime
@@ -12,7 +13,7 @@ def search_logs(
     ip: Optional[str] = None,
     search: Optional[str] = None,
     limit: int = 50
-) -> list[dict]:
+) -> str:
     """
     Search logs for specific criteria.
     Args:
@@ -36,4 +37,15 @@ def search_logs(
     
     params = LogQueryParams(**params_dict)
     
-    return store.query(params)
+    results = store.query(params)
+    
+    # Strip out timestamps, traceIds, and metadata to save LLM tokens
+    slim_logs = []
+    for log in results:
+        slim = {}
+        for k in ["id", "service", "level", "message", "userId", "ip"]:
+            if k in log and log[k] is not None:
+                slim[k] = log[k]
+        slim_logs.append(slim)
+        
+    return json.dumps(slim_logs)

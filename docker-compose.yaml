@@ -37,6 +37,7 @@ services:
     environment:
       - LOG_LEVEL=info
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-}
       - LOG_DIR=/app/logs
     volumes:
       - ./services/logs:/app/logs

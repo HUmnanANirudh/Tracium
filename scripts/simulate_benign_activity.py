@@ -15,7 +15,7 @@ def main():
             "timestamp": datetime.fromtimestamp(base_time + i*5, tz=timezone.utc).isoformat(),
             "message": f"Failed login attempt for user john",
             "userId": "john",
-            "ip": "192.168.1.101",
+            "ip": "203.0.113.101",
             "eventType": "login_failed"
         })
     

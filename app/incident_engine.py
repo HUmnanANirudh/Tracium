@@ -347,6 +347,53 @@ class IncidentEngine:
 
         return None, None
 
+    def check_sql_injection(self, log: LogEntry) -> tuple[Incident | None, str | None]:
+        if "sql" in log.message.lower() or "db_error" in (log.eventType or "") or "waf_alert" in (log.eventType or ""):
+            if "or 1=1" in log.message.lower() or "union select" in log.message.lower() or "syntax error near" in log.message.lower():
+                ip = log.ip or "unknown"
+                dedup_key = f"sql_injection:{ip}"
+                if self.dedup.is_suppressed(dedup_key)[0]:
+                    return None, None
+                self.dedup.add_timeline_event(dedup_key, log)
+                now = datetime.now(timezone.utc)
+                incident = Incident(
+                    id=f"sqli-{ip}-{now.strftime('%Y%m%d%H%M%S')}",
+                    type=IncidentType.SQL_INJECTION,
+                    severity=IncidentSeverity.CRITICAL,
+                    service=str(log.service),
+                    message=f"SQL Injection attempt detected from {ip}",
+                    timestamp=now,
+                    details={"ip": ip, "query_snippet": log.message},
+                    deduplication_key=dedup_key,
+                )
+                incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+                incident.timeline = self.build_timeline(dedup_key)
+                return incident, dedup_key
+        return None, None
+
+    def check_cryptomining(self, log: LogEntry) -> tuple[Incident | None, str | None]:
+        if "high_cpu" in (log.eventType or "") or "network_anomaly" in (log.eventType or "") or "xmrig" in log.message.lower() or "mining pool" in log.message.lower():
+            ip = log.ip or "unknown"
+            dedup_key = f"cryptomining:{ip}"
+            if self.dedup.is_suppressed(dedup_key)[0]:
+                return None, None
+            self.dedup.add_timeline_event(dedup_key, log)
+            now = datetime.now(timezone.utc)
+            incident = Incident(
+                id=f"crypto-{ip}-{now.strftime('%Y%m%d%H%M%S')}",
+                type=IncidentType.CRYPTOMINING,
+                severity=IncidentSeverity.HIGH,
+                service=str(log.service),
+                message=f"Suspected cryptomining activity on {ip}",
+                timestamp=now,
+                details={"ip": ip, "reason": log.message},
+                deduplication_key=dedup_key,
+            )
+            incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+            incident.timeline = self.build_timeline(dedup_key)
+            return incident, dedup_key
+        return None, None
+
     def analyze(self, log: LogEntry) -> tuple[list[Incident], list[SecurityAlert]]:
         incidents = []
         alerts = []
@@ -357,6 +404,8 @@ class IncidentEngine:
             ("error_spike", self.check_error_spike),
             ("latency_spike", self.check_latency_spike),
             ("container_restart", self.check_container_restart),
+            ("sql_injection", self.check_sql_injection),
+            ("cryptomining", self.check_cryptomining),
         ]
 
         for name, check in checks:

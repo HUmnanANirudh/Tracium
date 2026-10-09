@@ -15,7 +15,7 @@ def main():
             "timestamp": datetime.fromtimestamp(base_time + i*5, tz=timezone.utc).isoformat(),
             "message": f"Failed login attempt for user admin",
             "userId": "admin",
-            "ip": "192.168.1.102",
+            "ip": "203.0.113.102",
             "eventType": "login_failed"
         })
     
@@ -26,7 +26,7 @@ def main():
         "timestamp": datetime.fromtimestamp(base_time + 70, tz=timezone.utc).isoformat(),
         "message": f"Successful login for user admin",
         "userId": "admin",
-        "ip": "192.168.1.102",
+        "ip": "203.0.113.102",
         "eventType": "login_success"
     })
 
@@ -37,7 +37,7 @@ def main():
         "timestamp": datetime.fromtimestamp(base_time + 90, tz=timezone.utc).isoformat(),
         "message": f"Shell command executed: whoami",
         "userId": "admin",
-        "ip": "192.168.1.102",
+        "ip": "203.0.113.102",
         "eventType": "shell_execution"
     })
 
@@ -49,7 +49,7 @@ def main():
             "timestamp": datetime.fromtimestamp(base_time + 120 + i*10, tz=timezone.utc).isoformat(),
             "message": f"Large data transfer initiated",
             "userId": "admin",
-            "ip": "192.168.1.102",
+            "ip": "203.0.113.102",
             "eventType": "data_transfer"
         })
 
