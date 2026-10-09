@@ -6,21 +6,39 @@ export function createRunCard(r, events) {
   const statusStyle = STATUS_COLORS[r.status] || STATUS_COLORS.completed;
   
   const verdictSection = v ? `
-    <div class="mb-6">
-      <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-        <div class="h-px bg-white/10 flex-1"></div>
-        Verdict Analysis
-        <div class="h-px bg-white/10 flex-1"></div>
-      </h3>
-      <div class="glass-panel rounded-lg p-4">
-        <div class="flex justify-between items-start mb-3">
-          <span class="text-xs px-2 py-1 border rounded font-mono font-bold uppercase ${VERDICT_COLORS[v.classification] || 'text-gray-400 border-gray-600'}">
+    <div class="mb-6 grid grid-cols-2 gap-4">
+      <div class="glass-panel rounded-lg p-4 flex flex-col">
+        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <svg class="w-3 h-3 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+          What I See (Observation)
+        </h4>
+        <ul class="text-xs text-gray-300 space-y-2 list-disc list-inside flex-1">
+          ${(v.confirmed_facts || []).map(f => `<li>${esc(f)}</li>`).join('') || '<li class="text-gray-500 italic">No facts confirmed.</li>'}
+        </ul>
+      </div>
+      
+      <div class="glass-panel rounded-lg p-4 flex flex-col">
+        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <svg class="w-3 h-3 text-status-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+          What It Means (Inference)
+        </h4>
+        <ul class="text-xs text-gray-300 space-y-2 list-disc list-inside flex-1">
+          ${(v.inferred_relationships || []).map(i => `<li>${esc(i)}</li>`).join('') || '<li class="text-gray-500 italic">No inferences made.</li>'}
+        </ul>
+      </div>
+    </div>
+
+    <div class="mb-6 glass-panel rounded-lg p-4">
+      <div class="flex justify-between items-start mb-3 border-b border-white/5 pb-3">
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Thinking & Verdict</span>
+          <span class="text-xs px-2 py-0.5 border rounded font-mono font-bold uppercase ${VERDICT_COLORS[v.classification] || 'text-gray-400 border-gray-600'}">
             ${esc(v.classification).replace(/_/g, ' ')}
           </span>
-          <span class="text-xs font-mono text-gray-500">CONFIDENCE: ${(v.confidence * 100).toFixed(0)}%</span>
         </div>
-        <p class="text-sm text-gray-300 leading-relaxed">${esc(v.reasoning)}</p>
+        <span class="text-xs font-mono text-gray-500">CONFIDENCE: ${(v.confidence * 100).toFixed(0)}%</span>
       </div>
+      <p class="text-sm text-gray-300 leading-relaxed">${esc(v.reasoning)}</p>
     </div>
   ` : '';
 
@@ -28,7 +46,7 @@ export function createRunCard(r, events) {
     <div class="mb-6">
       <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
         <div class="h-px bg-white/10 flex-1"></div>
-        Proposed Response
+        Decided Action
         <div class="h-px bg-white/10 flex-1"></div>
       </h3>
       <div class="glass-panel border-brand-base/20 rounded-lg p-4 relative overflow-hidden">
