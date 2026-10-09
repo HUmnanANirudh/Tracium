@@ -34,17 +34,24 @@ app/
 ## Quick Start
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 uv sync
 
-# Run the API
+# 2. Set your Groq API Key for the Agentic investigation layer
+export GROQ_API_KEY="your-api-key"
+
+# 3. Run the API
 uv run uvicorn app.main:app --reload
 
-# Generate sample logs
-python services/log_generator.py 500
+# 4. Or run with Docker Compose (Loki + Grafana + API)
+# Ensure .env or environment variable GROQ_API_KEY is available to docker
+docker compose up -d
 
-# Run with Docker Compose (Loki + Grafana + API)
-docker compose up
+# 5. Run end-to-end simulated attacks (automatically triggers AI investigation)
+python scripts/run_demo.py
+
+# 6. Run the agent evals and policy checks
+PYTHONPATH=. uv run pytest tests/
 ```
 
 ## API Documentation
@@ -137,6 +144,11 @@ Incidents include a `timeline` array of correlated log events:
 | GET | `/suppressions` | List active suppressions |
 | GET | `/alerts/security` | Security alerts feed |
 | GET | `/health` | Health check |
+| POST | `/agents/incidents/{id}/run` | Start investigation agent |
+| GET | `/agents/runs/{id}` | Get agent run status |
+| POST | `/agents/runs/{id}/approve` | Approve agent response action |
+| POST | `/agents/runs/{id}/reject` | Reject agent response action |
+| GET | `/agents/runs/{id}/events` | View agent audit events |
 
 ## Log Format
 
