@@ -19,7 +19,10 @@ class ServiceName(str, Enum):
     WORKER = "worker"
 
 
+from uuid import uuid4
+
 class LogEntry(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
     service: ServiceName
     level: LogLevel
     timestamp: datetime = Field(default_factory=datetime.now)

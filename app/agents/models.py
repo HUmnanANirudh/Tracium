@@ -19,6 +19,8 @@ class Verdict(BaseModel):
     confidence: float = Field(ge=0, le=1)
     evidence_ids: list[str]
     reasoning: str
+    confirmed_facts: list[str] = Field(default_factory=list)
+    inferred_relationships: list[str] = Field(default_factory=list)
     missing_evidence: list[str] = Field(default_factory=list)
 
 
