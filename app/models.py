@@ -27,6 +27,7 @@ class LogEntry(BaseModel):
     userId: Optional[str] = None
     ip: Optional[str] = None
     traceId: Optional[str] = None
+    eventType: Optional[str] = None
     metadata: dict = Field(default_factory=dict)
     statusCode: Optional[int] = None
     latencyMs: Optional[float] = None

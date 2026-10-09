@@ -55,6 +55,7 @@ class Incident(BaseModel):
     false_positive_reason: Optional[str] = None
     suppressed_until: Optional[datetime] = None
     timeline: list[TimelineEntry] = Field(default_factory=list)
+    evidence_references: list[str] = Field(default_factory=list)
 
 
 class SecurityAlert(BaseModel):
