@@ -17,6 +17,15 @@ async def start_investigation(incident_id: str):
     run_id = runner.start_investigation(incident_id)
     return {"run_id": run_id, "status": "started"}
 
+@router.get("/runs")
+async def get_all_runs():
+    runs = []
+    for run_id in runner.active_runs.keys():
+        run = runner.get_run(run_id)
+        if run:
+            runs.append(run)
+    return runs
+
 @router.get("/runs/{run_id}")
 async def get_run_status(run_id: str):
     run = runner.get_run(run_id)

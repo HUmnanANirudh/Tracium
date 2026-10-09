@@ -23,7 +23,7 @@ scrape_configs:
           - localhost
         labels:
           job: tracium
-          __path__: /var/log/services/*.{log,txt,json}
+          __path__: /var/log/services/*
 
   - job_name: tracium-api
     static_configs:

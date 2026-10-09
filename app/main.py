@@ -54,6 +54,16 @@ from app.api.routes.agents import router as agents_router
 app.include_router(agents_router)
 
 
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+@app.get("/tracium", include_in_schema=False)
+async def serve_ui():
+    with open("app/static/index.html", "r") as f:
+        return HTMLResponse(content=f.read())
+
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
     return get_swagger_ui_html(
