@@ -54,7 +54,7 @@ def main():
         })
 
     with httpx.Client(base_url="http://localhost:8000") as client:
-        response = client.post("/api/ingest", json={"logs": logs})
+        response = client.post("/logs/ingest", json={"logs": logs})
         if response.status_code == 200:
             print("Successfully ingested attack chain logs.")
         else:

@@ -1,15 +1,11 @@
-{
-  "apiVersion": 1,
-  "providers": [
-    {
-      "folder": "",
-      "name": "Tracium Dashboards",
-      "options": [
-        {
-          "path": "/etc/grafana/provisioning/dashboards"
-        }
-      ],
-      "type": "file"
-    }
-  ]
-}
+apiVersion: 1
+
+providers:
+  - name: 'Tracium Dashboards'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    options:
+      path: /etc/grafana/provisioning/dashboards
