@@ -56,10 +56,8 @@ class AgentRunner:
     def _run_graph(self, run_id: str, state_input: dict):
         config = {"configurable": {"thread_id": run_id}}
         try:
-            # invoke or stream
-            for event in self.graph.stream(state_input, config=config):
-                # We could capture event outputs here for SSE streaming
-                pass
+            # invoke
+            self.graph.invoke(state_input, config=config)
                 
             # After graph finishes (or pauses)
             state = self.graph.get_state(config)
@@ -122,8 +120,7 @@ class AgentRunner:
         config = {"configurable": {"thread_id": run_id}}
         try:
             # passing None resumes the graph from interrupted state
-            for event in self.graph.stream(None, config=config):
-                pass
+            self.graph.invoke(None, config=config)
                 
             state = self.graph.get_state(config)
             

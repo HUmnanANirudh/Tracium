@@ -1,6 +1,5 @@
 from app.agents.state import InvestigationState
 from app.agents.tools.enrichment_tools import check_ip_reputation, get_mitre_attack_technique
-from langchain_core.messages import SystemMessage
 
 def enrich_node(state: InvestigationState) -> dict:
     incident = state.get("incident_snapshot", {})

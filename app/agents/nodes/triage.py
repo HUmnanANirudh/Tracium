@@ -1,4 +1,3 @@
-from langchain_core.messages import SystemMessage
 from app.agents.state import InvestigationState
 from app.log_store import store
 

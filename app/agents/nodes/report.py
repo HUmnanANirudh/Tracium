@@ -1,6 +1,5 @@
 from app.agents.state import InvestigationState
 from app.services.audit import audit_store
-import json
 
 def report_node(state: InvestigationState) -> dict:
     run_id = state.get("run_id", "unknown")

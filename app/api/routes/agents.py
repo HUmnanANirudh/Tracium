@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.agents.runner import runner
+from app.services.audit import audit_store
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -39,6 +40,5 @@ async def reject_run(run_id: str, req: RejectionRequest):
 
 @router.get("/runs/{run_id}/events")
 async def get_run_events(run_id: str):
-    from app.services.audit import audit_store
     events = [e for e in audit_store.events if e.run_id == run_id]
     return {"events": events}

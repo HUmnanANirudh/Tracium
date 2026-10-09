@@ -1,5 +1,6 @@
 from app.agents.state import InvestigationState
 from app.agents.tools.response_tools import executor
+from app.services.audit import audit_store
 
 def execute_response_node(state: InvestigationState) -> dict:
     proposal = state.get("response_proposal")
@@ -16,7 +17,6 @@ def execute_response_node(state: InvestigationState) -> dict:
         approval_status = state.get("approval_status")
         if approval_status != "approved":
             # Record rejection or expiration
-            from app.services.audit import audit_store
             audit_store.record(
                 run_id=run_id,
                 event_type="action_rejected",
