@@ -11,7 +11,24 @@ class LogStore:
         self.alerts: list[SecurityAlert] = []
 
     def ingest(self, logs: list[LogEntry]) -> int:
+        import os
+        import json
         self.logs.extend(logs)
+        
+        # Write to file for Promtail to scrape
+        log_dir = os.getenv("LOG_DIR", "services/logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, "app.json")
+        
+        try:
+            with open(log_file, "a") as f:
+                for log in logs:
+                    log_dict = log.model_dump(mode="json")
+                    # Promtail uses timestamp, level, service, etc.
+                    f.write(json.dumps(log_dict) + "\n")
+        except Exception as e:
+            print(f"Failed to write to log file: {e}")
+            
         return len(logs)
 
     def query(self, params: LogQueryParams) -> list[dict]:
