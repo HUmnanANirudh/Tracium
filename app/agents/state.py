@@ -19,6 +19,7 @@ class InvestigationState(TypedDict):
     # Verdict & Response
     verdict: Verdict | None
     response_proposal: ResponseProposal | None
+    approval_status: str | None
     
     # Limits & Execution
     messages: Annotated[list, add]
