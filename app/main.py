@@ -51,7 +51,9 @@ app.add_api_route("/alerts/security", get_security_alerts, methods=["GET"])
 app.add_api_route("/health", health, methods=["GET"])
 
 from app.api.routes.agents import router as agents_router
+from app.api.routes.simulate import router as simulate_router
 app.include_router(agents_router)
+app.include_router(simulate_router)
 
 
 from fastapi.responses import HTMLResponse

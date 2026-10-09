@@ -1,38 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="dark">
 <head>
-  <title>Tracium UI</title>
+  <meta charset="UTF-8">
+  <title>Tracium SIEM</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/static/app.js" defer></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            surface: { 100: '#1e1e24', 200: '#16161b', 300: '#0f0f13' },
+            brand: { base: '#3b82f6', glow: '#60a5fa' },
+            status: { 
+              critical: '#ef4444', 
+              high: '#f97316', 
+              medium: '#eab308', 
+              low: '#3b82f6',
+              success: '#10b981'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    body {
+      background-color: #0f0f13; /* surface-300 */
+      color: #e5e7eb;
+    }
+    
+    /* Custom scrollbar for a polished feel */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    
+    .glass-panel {
+      background: rgba(30, 30, 36, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+  <script type="module" src="/static/js/main.js"></script>
 </head>
-<body class="bg-gray-100 p-8 font-mono h-screen flex flex-col">
-  <header class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">Tracium Threat Intelligence</h1>
-    <div id="stats" class="text-sm text-gray-500 font-bold bg-white px-4 py-2 rounded shadow"></div>
+<body class="h-screen flex flex-col font-sans overflow-hidden antialiased selection:bg-brand-base selection:text-white">
+  
+  <!-- Header -->
+  <header class="h-14 border-b border-white/10 glass-panel flex justify-between items-center px-6 shrink-0 z-20">
+    <div class="flex items-center space-x-3">
+      <div class="h-5 w-5 bg-brand-base rounded-sm shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+      <h1 class="text-lg font-bold tracking-tight text-white">Tracium <span class="font-normal text-gray-400 ml-1">Threat Ops</span></h1>
+    </div>
+    
+    <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-1 bg-surface-200 p-1 rounded border border-white/5" id="sim-controls">
+        <!-- Buttons injected by JS -->
+      </div>
+      <div id="stats" class="text-xs font-mono text-gray-400 bg-surface-200 px-3 py-1.5 rounded border border-white/5 min-w-[120px] text-center">
+        Connecting...
+      </div>
+    </div>
   </header>
   
-  <div class="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
+  <div class="flex-1 flex overflow-hidden">
     <!-- Left: Incident List -->
-    <div class="col-span-4 bg-white rounded-lg shadow-lg flex flex-col overflow-hidden">
-      <div class="bg-gray-800 text-white p-4">
-        <h2 class="text-lg font-bold">Detected Threats</h2>
+    <div class="w-96 flex flex-col border-r border-white/10 bg-surface-200 z-10 shrink-0">
+      <div class="h-10 border-b border-white/5 flex items-center px-4 bg-surface-100">
+        <h2 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Alert Queue</h2>
       </div>
-      <div id="inc-list" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
+      <div id="inc-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
     </div>
     
     <!-- Right: AI Investigation Details -->
-    <div class="col-span-8 bg-white rounded-lg shadow-lg flex flex-col overflow-hidden">
-      <div class="bg-blue-900 text-white p-4 flex justify-between items-center">
-        <h2 class="text-lg font-bold">AI Copilot Investigation</h2>
-        <span id="selected-incident-id" class="text-xs text-blue-300 font-mono"></span>
+    <div class="flex-1 flex flex-col bg-surface-300 relative z-0">
+      <div class="h-10 border-b border-white/10 flex items-center justify-between px-6 bg-surface-100">
+        <h2 class="text-xs font-semibold tracking-wider text-gray-300 uppercase flex items-center gap-2">
+          <svg class="w-3.5 h-3.5 text-brand-base" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          Investigation Context
+        </h2>
+        <span id="selected-incident-id" class="text-xs font-mono text-gray-500"></span>
       </div>
-      <div id="ai-list" class="flex-1 overflow-y-auto p-6 bg-gray-50 relative">
-        <div class="absolute inset-0 flex items-center justify-center text-gray-400">
-          <p>Select a threat from the left to view the AI's response.</p>
+      <div id="ai-list" class="flex-1 overflow-y-auto p-6 relative">
+        <div class="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+          Select an alert from the queue to view investigation details.
         </div>
       </div>
     </div>
   </div>
-  <div id="err" class="text-red-500 mt-4 text-sm font-bold"></div>
+  
+  <!-- Global Error Banner -->
+  <div id="err" class="fixed bottom-0 left-0 right-0 text-center text-xs font-mono font-bold text-white transition-transform translate-y-full px-4 py-1.5 z-50"></div>
+
 </body>
 </html>
