@@ -14,6 +14,14 @@ def main():
     
     print("3. Attack Chain")
     subprocess.run(["python3", "scripts/simulate_attack_chain.py"])
+    time.sleep(2)
+    
+    print("4. SQL Injection")
+    subprocess.run(["python3", "scripts/simulate_sql_injection.py"])
+    time.sleep(2)
+    
+    print("5. Cryptomining")
+    subprocess.run(["python3", "scripts/simulate_cryptomining.py"])
     print("Demo execution complete.")
 
 if __name__ == "__main__":
