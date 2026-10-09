@@ -43,7 +43,8 @@ class LogStore:
         return [s.value for s in ServiceName]
 
     def add_incident(self, incident: Incident):
-        self.incidents.append(incident)
+        if not any(inc.id == incident.id for inc in self.incidents):
+            self.incidents.append(incident)
 
     def add_alert(self, alert: SecurityAlert):
         self.alerts.append(alert)

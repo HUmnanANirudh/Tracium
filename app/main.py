@@ -50,6 +50,9 @@ app.add_api_route("/suppressions", get_suppressions, methods=["GET"])
 app.add_api_route("/alerts/security", get_security_alerts, methods=["GET"])
 app.add_api_route("/health", health, methods=["GET"])
 
+from app.api.routes.agents import router as agents_router
+app.include_router(agents_router)
+
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():

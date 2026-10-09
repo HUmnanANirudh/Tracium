@@ -24,7 +24,7 @@ def route_after_policy(state: InvestigationState) -> str:
     
     return "execute_response"
 
-def create_investigation_graph():
+def create_investigation_graph(checkpointer=None):
     builder = StateGraph(InvestigationState)
     
     builder.add_node("triage", triage_node)
@@ -60,5 +60,7 @@ def create_investigation_graph():
     builder.add_edge("execute_response", "report")
     builder.add_edge("report", END)
     
-    checkpointer = MemorySaver()
+    if checkpointer is None:
+        checkpointer = MemorySaver()
+        
     return builder.compile(checkpointer=checkpointer, interrupt_before=["await_approval"])
