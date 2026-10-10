@@ -61,7 +61,12 @@
     
     <div class="flex items-center space-x-4">
       <div class="flex items-center space-x-1 bg-surface-200 p-1 rounded border border-white/5" id="sim-controls">
-        <!-- Buttons injected by JS -->
+        <button onclick="window.simulate('benign')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">Benign</button>
+        <button onclick="window.simulate('brute_force')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">Brute Force</button>
+        <button onclick="window.simulate('sql_injection')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">SQLi</button>
+        <button onclick="window.simulate('cryptomining')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">Cryptomining</button>
+        <button onclick="window.simulate('attack_chain')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">APT Chain</button>
+        <button onclick="window.simulate('all')" class="ml-2 px-4 py-1 text-xs font-extrabold bg-brand-base text-white hover:bg-brand-glow rounded shadow transition-all">SIMULATE ALL</button>
       </div>
       <div id="stats" class="text-xs font-mono text-gray-400 bg-surface-200 px-3 py-1.5 rounded border border-white/5 min-w-[120px] text-center">
         Connecting...
@@ -81,8 +86,7 @@
     <!-- Right: AI Investigation Details -->
     <div class="flex-1 flex flex-col bg-surface-300 relative z-0">
       <div class="h-10 border-b border-white/10 flex items-center justify-between px-6 bg-surface-100">
-        <h2 class="text-xs font-semibold tracking-wider text-gray-300 uppercase flex items-center gap-2">
-          <svg class="w-3.5 h-3.5 text-brand-base" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        <h2 class="text-xs font-semibold tracking-wider text-gray-300 uppercase">
           Investigation Context
         </h2>
         <span id="selected-incident-id" class="text-xs font-mono text-gray-500"></span>
