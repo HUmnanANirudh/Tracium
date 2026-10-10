@@ -1,190 +1,147 @@
-# Security Story: Brute Force → Shell Spawn → Data Exfiltration
+# Security Story: From Initial Breach to Data Exfiltration
 
 ## Scenario
 
-An attacker performs a multi-stage attack against the system:
+An attacker executes a four-stage intrusion against the application:
 
-1. **Reconnaissance**: Attacker scans for valid usernames
-2. **Brute Force**: Repeated failed login attempts from single IP
-3. **Credential Stuffing**: One credential works → account compromised
-4. **Lateral Movement**: Shell spawned on backend service
-5. **Exfiltration**: Data access and extraction detected
+1. Password Guessing: Repeated failed login attempts against the `auth` service.
+2. Initial Access: One valid credential succeeds, granting account access.
+3. Interactive Shell: Attacker runs terminal commands (`whoami`) on the `backend` service.
+4. Data Exfiltration: Large outbound data transfers occur from the `worker` service.
 
-## Logs Generated
+---
+
+## Log Telemetry
+
+The attack produces this log sequence:
 
 ```
-10:01:15 [auth] level=error message="JWT validation failed" ip=203.0.113.42 userId=user123 traceId=a1b2c3
-10:01:16 [auth] level=error message="JWT validation failed" ip=203.0.113.42 userId=user123 traceId=a1b2c4
-10:01:17 [auth] level=error message="JWT validation failed" ip=203.0.113.42 userId=user123 traceId=a1b2c5
-10:01:18 [auth] level=error message="JWT validation failed" ip=203.0.113.42 userId=user123 traceId=a1b2c6
-10:01:19 [auth] level=error message="Invalid credentials" ip=203.0.113.42 userId=user123 traceId=a1b2c7
-10:01:20 [auth] level=error message="JWT validation failed" ip=203.0.113.42 userId=user123 traceId=a1b2c8
-...
-10:01:42 [auth] level=info message="User authenticated successfully" ip=203.0.113.42 userId=user123 traceId=a1b2c9
-10:02:01 [backend] level=info message="Request completed in 5ms" endpoint=/api/shell latencyMs=5 traceId=a1b2c10
-10:02:15 [worker] level=error message="Suspicious process detected: /tmp/backdoor.sh" traceId=a1b2c11
-10:02:30 [worker] level=critical message="Data exfiltration detected: 500MB outbound" traceId=a1b2c12
+10:01:15 [auth] level=error message="Failed login attempt for user admin" ip=203.0.113.142 userId=admin eventType=login_failed
+10:01:20 [auth] level=error message="Failed login attempt for user admin" ip=203.0.113.142 userId=admin eventType=login_failed
+10:01:25 [auth] level=error message="Failed login attempt for user admin" ip=203.0.113.142 userId=admin eventType=login_failed
+10:01:30 [auth] level=error message="Failed login attempt for user admin" ip=203.0.113.142 userId=admin eventType=login_failed
+10:01:35 [auth] level=error message="Failed login attempt for user admin" ip=203.0.113.142 userId=admin eventType=login_failed
+10:02:10 [auth] level=info  message="Successful login for user admin" ip=203.0.113.142 userId=admin eventType=login_success
+10:02:30 [backend] level=warning message="Shell command executed: whoami" ip=203.0.113.142 userId=admin eventType=shell_execution
+10:03:00 [backend] level=warning message="Large data transfer initiated" ip=203.0.113.142 userId=admin eventType=data_transfer
 ```
 
-## Correlation Pipeline
+---
 
-```mermaid
-graph LR
-    A[Logs Generated] --> B[Promtail]
-    B --> C[Loki]
-    C --> D[FastAPI Ingest]
-    D --> E[IncidentEngine]
-    E --> F[Incident Created]
-    F --> G[Timeline Assembled]
-    G --> H[Severity Escalated]
-    H --> I[Alert Dispatched]
-    I --> J[Investigation Dashboard]
+## Detection and Correlation Pipeline
+
+```
+[ Logs Generated ]
+        |
+        v
+[ POST /logs/ingest ]
+        |
+        +-----------------------------------+
+        |                                   |
+        v                                   v
+[ Written to /app/logs/app.json ]   [ IncidentEngine.analyze() ]
+        |                                   |
+        v                                   v
+[ Promtail -> Loki -> Grafana ]     [ Incident Created: bf-203.0.113.142 ]
+                                            |
+                                            v
+                                    [ LangGraph Investigation ]
+                                            |
+                                            v
+                                    [ Policy Gate Approval ]
+                                            |
+                                            v
+                                    [ Response Execution ]
 ```
 
-## Step-by-Step Correlation
+---
+
+## Step-by-Step Execution
 
 ### Step 1: Log Ingestion
+Microservices send log batches to the ingestion endpoint:
 
 ```bash
 POST /logs/ingest
+Content-Type: application/json
+
 {
   "logs": [
-    {"service": "auth", "level": "error", "message": "JWT validation failed", "ip": "203.0.113.42", ...},
-    ...
-  ]
-}
-```
-
-### Step 2: Correlation Rules Triggered
-
-The `IncidentEngine` runs all checks:
-
-| Check | Trigger | Result |
-|-------|---------|--------|
-| `check_brute_force` | 5+ failed logins from same IP in 5min | ✅ Detected |
-| `check_auth_anomaly` | Off-hours auth failure | ⚠️ Suppressed (not off-hours) |
-| `check_container_restart` | Container restart pattern | ❌ Not triggered |
-
-### Step 3: Incident Created
-
-```bash
-POST /incidents/bbf-203.0.113.42-100142
-{
-  "id": "bf-203.0.113.42-100142",
-  "type": "brute_force",
-  "severity": "high",
-  "state": "open",
-  "message": "Brute force detected: 5 failed login attempts from 203.0.113.42",
-  "deduplication_key": "brute_force:auth:203.0.113.42",
-  "event_count": 5,
-  "confidence_score": 0.8
-}
-```
-
-### Step 4: Timeline Assembled
-
-```bash
-GET /incidents/bf-203.0.113.42-100142/timeline
-{
-  "timeline": [
-    {"sequence": 1, "timestamp": "10:01:15", "service": "auth", "level": "error", "message": "JWT validation failed"},
-    {"sequence": 2, "timestamp": "10:01:16", "service": "auth", "level": "error", "message": "JWT validation failed"},
-    {"sequence": 3, "timestamp": "10:01:17", "service": "auth", "level": "error", "message": "JWT validation failed"},
-    {"sequence": 4, "timestamp": "10:01:18", "service": "auth", "level": "error", "message": "JWT validation failed"},
-    {"sequence": 5, "timestamp": "10:01:19", "service": "auth", "level": "error", "message": "Invalid credentials"},
-    {"sequence": 6, "timestamp": "10:01:20", "service": "auth", "level": "error", "message": "JWT validation failed"}
-  ]
-}
-```
-
-### Step 5: Severity Escalation
-
-Based on subsequent logs, severity escalates:
-
-- `worker:error` → "Suspicious process detected" → Severity: **HIGH**
-- `worker:critical` → "Data exfiltration detected" → Severity: **CRITICAL**
-
-### Step 6: Alert Dispatched
-
-```bash
-GET /alerts/security
-{
-  "alerts": [
     {
-      "id": "alert-bf-100142",
-      "type": "brute_force",
-      "severity": "high",
-      "sourceIp": "203.0.113.42",
-      "message": "Brute force detected: 5 failed login attempts from 203.0.113.42"
+      "service": "auth",
+      "level": "error",
+      "message": "Failed login attempt for user admin",
+      "ip": "203.0.113.142",
+      "userId": "admin",
+      "eventType": "login_failed"
     }
   ]
 }
 ```
 
-### Step 7: Investigation Dashboard
+### Step 2: Correlation Engine Flags Incident
+The engine detects five failed logins from IP `203.0.113.142` inside the 5-minute sliding window:
 
-```bash
-GET /incidents/bf-203.0.113.42-100142/root-cause
+- Rule Triggered: `check_brute_force`
+- Action: Opens incident `bf-203.0.113.142-20261010` with severity `high`.
+- Event Count: 5 events aggregated under key `brute_force:auth:203.0.113.142`.
+
+### Step 3: Automated Investigation Starts
+The backend starts a LangGraph background investigation:
+- Queries the log store for all telemetry related to IP `203.0.113.142` and user `admin`.
+- Checks threat intelligence: IP risk score is 93 (known botnet).
+- Maps the behavior to MITRE ATT&CK technique `T1110` (Brute Force) and `T1059` (Command and Scripting Interpreter).
+
+### Step 4: AI Verdict and Response Recommendation
+Google Gemini processes the gathered evidence in a single turn and produces:
+
+```json
 {
-  "incident_id": "bf-203.0.113.42-100142",
-  "type": "brute_force",
-  "summary": "Brute force detected: 5 failed login attempts from 203.0.113.42",
-  "initial_event": {
-    "timestamp": "10:01:15",
-    "service": "auth",
-    "message": "JWT validation failed"
+  "verdict": {
+    "classification": "true_positive",
+    "confidence": 1.0,
+    "confirmed_facts": [
+      "Repeated failed logins recorded from IP 203.0.113.142 against user admin",
+      "Successful authentication followed immediately by interactive shell command whoami",
+      "Subsequent outbound data transfer from the compromised session"
+    ],
+    "inferred_relationships": [
+      "Attacker obtained admin credentials through credential stuffing",
+      "Shell execution confirms interactive remote access",
+      "Subsequent file activity indicates data exfiltration"
+    ],
+    "reasoning": "The sequence of failed logins, successful authentication, interactive command execution, and outbound data movement demonstrates an active intrusion."
   },
-  "contributing_factors": [
-    "Multiple failed login attempts from IP: 203.0.113.42",
-    "Attempt count: 5",
-    "Insufficient account lockout policy"
-  ],
-  "impact_assessment": {
-    "account_compromise_risk": "HIGH",
-    "lateral_movement_risk": "MEDIUM",
-    "data_exposure_risk": "HIGH"
-  },
-  "recommended_actions": [
-    "Block source IP at firewall",
-    "Implement account lockout after N attempts",
-    "Enable MFA for affected accounts",
-    "Review access logs for successful breaches"
-  ]
+  "response_proposal": {
+    "action": "isolate_service",
+    "target": "203.0.113.142",
+    "risk_tier": "high",
+    "justification": "Isolating the session and associated host prevents further data theft.",
+    "rollback_plan": "Restore network routing after verifying credentials and patching access point.",
+    "requires_approval": true
+  }
 }
 ```
 
-## Related Logs
+### Step 5: Policy Gate Halts Execution
+The policy gate in `app/agents/policy.py` checks the proposal:
+- Action: `isolate_service`
+- Risk Tier: `high`
+- Policy Decision: High-risk operations cannot run autonomously.
+- State: Graph execution pauses. Incident status updates to `pending_approval`.
 
-```bash
-GET /incidents/bf-203.0.113.42-100142/related-logs
-{
-  "incident_id": "bf-203.0.113.42-100142",
-  "related_logs": [
-    {"timestamp": "10:01:15", "service": "auth", "level": "error", "message": "JWT validation failed", "ip": "203.0.113.42", "traceId": "a1b2c3"},
-    {"timestamp": "10:01:20", "service": "auth", "level": "error", "message": "JWT validation failed", "ip": "203.0.113.42", "traceId": "a1b2c8"},
-    {"timestamp": "10:01:42", "service": "auth", "level": "info", "message": "User authenticated successfully", "ip": "203.0.113.42", "traceId": "a1b2c9"},
-    {"timestamp": "10:02:15", "service": "worker", "level": "error", "message": "Suspicious process detected", "traceId": "a1b2c11"},
-    {"timestamp": "10:02:30", "service": "worker", "level": "critical", "message": "Data exfiltration detected", "traceId": "a1b2c12"}
-  ]
-}
-```
+### Step 6: Human Analyst Decision
+The analyst opens the dashboard at `http://localhost:8000/tracium`:
+- Reviews observations, inferences, and evidence logs.
+- Clicks Approve Execution.
+- The backend resumes the graph thread, calls `executor.execute("isolate_service", "203.0.113.142")`, updates the audit trail, and marks the run `completed`.
 
-## Incident State Transitions
+---
 
-```
-OPEN → INVESTIGATING → MITIGATED → RESOLVED
-  ↓
-FALSE_POSITIVE (if marked as FP)
-```
-
-## Investigation Flow
+## State Transition Cycle
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  1. GET /incidents/{id}       → Initial incident details   │
-│  2. GET /incidents/{id}/timeline → Attack progression      │
-│  3. GET /incidents/{id}/related-logs → All related events  │
-│  4. GET /incidents/{id}/root-cause → Analysis + actions    │
-│  5. PATCH /incidents/{id}/state → Update investigation     │
-└─────────────────────────────────────────────────────────────┘
+OPEN -> INVESTIGATING -> PENDING_APPROVAL -> COMPLETED
+                              |
+                              +-> REJECTED -> COMPLETED
 ```

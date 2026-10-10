@@ -1,108 +1,116 @@
 # Tracium
 
-**Tracium** is a cloud-native, agentic AI security operations framework and SIEM-lite. It combines automated log correlation, distributed observability (Loki + Promtail + Grafana), and an autonomous **LangGraph-powered AI Security Copilot** backed by **Google Gemini** for instant threat triage, contextual root-cause inference, and human-in-the-loop response containment.
+Tracium is a log aggregation and automated incident response system. It combines log ingestion, real-time alert correlation, Grafana observability (Loki and Promtail), and an automated security investigation engine powered by LangGraph and Google Gemini.
 
 ---
 
-## Quick Access Links
+## Service Addresses
 
-Once the containers are running, access the services:
+When the Docker containers run, access the services at these addresses:
 
-| Service | URL | Credentials / Notes |
+| Service | Address | Notes |
 | :--- | :--- | :--- |
-| **Tracium Security Operations Center** | [`http://localhost:8000/tracium`](http://localhost:8000/tracium) | Real-time threat queue, AI investigation & approval UI |
-| **Grafana Observability Dashboard** | [`http://localhost:3000`](http://localhost:3000) | Username: `admin` \| Password: `admin` |
-| **Interactive API Documentation (Swagger)** | [`http://localhost:8000/docs`](http://localhost:8000/docs) | Complete OpenAPI specification & live test console |
-| **Alternative API Docs (ReDoc)** | [`http://localhost:8000/redoc`](http://localhost:8000/redoc) | Read-only schema & contract reference |
-| **Loki Log Ingestion / Query API** | [`http://localhost:3100`](http://localhost:3100) | LogQL query engine endpoint |
+| Tracium Web Dashboard | [http://localhost:8000/tracium](http://localhost:8000/tracium) | Live alert feed, AI findings, and response approval |
+| Grafana Dashboard | [http://localhost:3000](http://localhost:3000) | Username: `admin` | Password: `admin` |
+| Interactive API Docs (Swagger) | [http://localhost:8000/docs](http://localhost:8000/docs) | OpenAPI test console |
+| Schema Reference (ReDoc) | [http://localhost:8000/redoc](http://localhost:8000/redoc) | Read-only API reference |
+| Loki Query API | [http://localhost:3100](http://localhost:3100) | LogQL query endpoint |
 
 ---
 
-## Architecture Overview
+## Project Documentation
+
+Detailed guides live in the `docs/` directory:
+
+- [Project Overview](docs/project-overview.md): Technical summary explaining what the system does, why we built it, why we simulate attacks, and what it achieves.
+- [Security Story Walkthrough](docs/security-story.md): An end-to-end trace of a multi-stage attack from password guessing to data theft.
+- [System Scope and Limitations](docs/limitations.md): Technical trade-offs, design boundaries, and future production requirements.
+
+---
+
+## Architecture
 
 ```
-                      ┌──────────────────────────────────────────────┐
-                      │              Incoming Telemetry              │
-                      └──────────────────────┬───────────────────────┘
-                                             │
+                      +----------------------------------------------+
+                      |              Incoming Telemetry              |
+                      +----------------------┬-----------------------+
+                                             |
                                    POST /logs/ingest
-                                             │
-                                             ▼
-                               ┌───────────────────────────┐
-                               │     Tracium Ingestion     │
-                               │  (FastAPI Rate Limiter)   │
-                               └─────────────┬─────────────┘
-                                             │
-                      ┌──────────────────────┴──────────────────────┐
-                      │                                             │
-                      ▼                                             ▼
-          ┌───────────────────────┐                     ┌───────────────────────┐
-          │     Log Store &       │                     │    Incident Engine    │
-          │  Promtail Log File    │                     │  (Correlation Rules)  │
-          └───────────┬───────────┘                     └───────────┬───────────┘
-                      │                                             │
-          ┌───────────┴───────────┐                                 │ Open Incident
-          ▼                       ▼                                 ▼
-    ┌───────────┐           ┌───────────┐               ┌───────────────────────┐
-    │ Promtail  │           │ In-Memory │               │    Agentic AI Copilot │
-    └─────┬─────┘           │ Store API │               │ (LangGraph + Gemini)  │
-          ▼                 └───────────┘               └───────────┬───────────┘
-    ┌───────────┐                                                   │
-    │   Loki    │                                                   ▼
-    └─────┬─────┘                                       ┌───────────────────────┐
-          │                                             │  Threat Ops Dashboard │
-          ▼                                             │   (http://.../tracium)│
-    ┌───────────┐                                       └───────────────────────┘
-    │  Grafana  │
-    └───────────┘
+                                             |
+                                             v
+                               +---------------------------+
+                               |     Tracium Ingestion     |
+                               |  (FastAPI Rate Limiter)   |
+                               +-------------┬-------------+
+                                             |
+                      +----------------------┴----------------------+
+                      |                                             |
+                      v                                             v
+          +-----------------------+                     +-----------------------+
+          |     Log Store &       |                     |    Incident Engine    |
+          |  Promtail Log File    |                     |  (Correlation Rules)  |
+          +-----------┬-----------+                     +-----------┬-----------+
+                      |                                             |
+          +-----------┴-----------+                                 | Open Incident
+          v                       v                                 v
+    +-----------+           +-----------+               +-----------------------+
+    | Promtail  |           | In-Memory |               |    AI Agent Engine    |
+    +-----┬-----+           | Store API |               | (LangGraph + Gemini)  |
+          v                 +-----------+               +-----------┬-----------+
+    +-----------+                                                   |
+    |   Loki    |                                                   v
+    +-----┬-----+                                       +-----------------------+
+          |                                             |  Threat Ops Dashboard |
+          v                                             |   (http://.../tracium)|
+    +-----------+                                       +-----------------------+
+    |  Grafana  |
+    +-----------+
 ```
 
-1. **Dual-Path Telemetry Pipeline**:
-   - Ingested logs are stored in-memory for real-time SIEM correlation and appended to `/app/logs/app.json`.
-   - Promtail scrapes the structured log file and forwards events to **Grafana Loki** for historical querying and LogQL metrics.
-2. **Deterministic Correlation Engine**:
-   - Real-time rules aggregate related anomalies (brute force, SQL injection, cryptomining, container restarts) using sliding 5-minute deduplication windows.
-3. **Agentic AI Security Copilot (LangGraph + Google Gemini)**:
-   - Evaluates incident telemetry, enriches IP reputation and MITRE ATT&CK techniques, reconstructs the timeline, infers threat intent, and proposes playbook-driven response containment actions requiring human analyst approval.
+1. Dual Log Pipeline:
+   - The API writes ingested logs to `/app/logs/app.json`.
+   - Promtail tails this file and streams records to Grafana Loki for search and dashboard metrics.
+   - The API also keeps logs in memory for fast correlation and incident analysis.
+2. Correlation Engine:
+   - Python correlation rules inspect incoming logs within a 5-minute sliding window.
+   - Matching patterns generate incidents (brute force, SQL injection, cryptomining, container restarts).
+3. AI Security Engine (LangGraph + Google Gemini):
+   - When an incident opens, LangGraph starts an investigation.
+   - It enriches the target IP, maps the behavior to the MITRE ATT&CK matrix, gathers log evidence, asks Gemini for root-cause analysis, and recommends a playbook containment action.
+   - A policy gate requires human approval before executing any high-risk action.
 
 ---
 
 ## Prerequisites
 
-- **Docker** (v24.0+) & **Docker Compose** (v2.20+)
-- **Python 3.11+** (if executing simulation scripts directly on host)
-- **Google Gemini API Key** (from [Google AI Studio](https://aistudio.google.com/))
+- Docker (v24.0+) and Docker Compose (v2.20+)
+- Python 3.11+ (if running simulation scripts from the host)
+- Google Gemini API Key (from Google AI Studio)
 
 ---
 
-## Step-by-Step Setup & Replication
+## Setup and Installation
 
-### 1. Clone & Configure Environment
+### 1. Configure Environment Variables
 
-Clone the repository and create your `.env` configuration file in the project root:
+Create a `.env` file in the project root:
 
 ```bash
-git clone https://github.com/HUmnanANirudh/Tracium.git
-cd Tracium
-
-# Create .env with your Gemini API Key
-cat << 'EOF_ENV' > .env
+cat << 'EOF' > .env
 GEMINI_API_KEY=your_gemini_api_key_here
 LOG_LEVEL=info
-EOF_ENV
+EOF
 ```
 
-> **Note**: Tracium uses the fast and capable `gemini-3.1-flash-lite` model, optimized to run with unified single-turn investigation to remain safely within the free tier request limits.
+### 2. Start the Stack
 
-### 2. Launch the Stack with Docker Compose
-
-Build and launch all services (`api`, `loki`, `promtail`, `grafana`):
+Build and start the containers:
 
 ```bash
 sudo -E docker compose up -d --build
 ```
 
-Verify that all containers are healthy:
+Verify that all four containers run:
 
 ```bash
 docker compose ps
@@ -111,126 +119,116 @@ docker compose ps
 Expected output:
 ```
 NAME                IMAGE                    COMMAND                  SERVICE    STATUS
-tracium-api         tracium-api              "uv run uvicorn app.…"   api        Up (healthy)
+tracium-api         tracium-api              "uv run uvicorn app.…"   api        Up
 tracium-grafana     grafana/grafana:11.4.0   "/run.sh"                grafana    Up
 tracium-loki        grafana/loki:3.2.0       "/usr/bin/loki -conf…"   loki       Up
 tracium-promtail    grafana/promtail:3.2.0   "/usr/bin/promtail -…"   promtail   Up
 ```
 
-### 3. Open the Threat Operations Dashboard
+### 3. Open the Dashboard
 
-Open your browser and navigate to:
-**[http://localhost:8000/tracium](http://localhost:8000/tracium)**
+Open your web browser and visit:
+[http://localhost:8000/tracium](http://localhost:8000/tracium)
 
-The interface displays:
-- **Top Navigation Bar**: 1-click simulation triggers and live threat counter.
-- **Left Panel (Alert Queue)**: Real-time incident feed with status tags, event counts, and severity badges.
-- **Right Panel (Investigation Context)**: Deep AI analysis, observation points, attack hypothesis, playbook response proposal, and execution trace.
+- Top Bar: Buttons to trigger simulations and view total incident counts.
+- Left Column: Queue of active alerts.
+- Main Area: Investigation context, facts, inferences, recommended actions, and approval controls.
 
 ---
 
-## Replicating Attack Scenarios
+## Running Attack Simulations
 
-You can simulate attacks using any of the three methods below:
+You can run simulations in three ways:
 
-### Method A: 1-Click Buttons in the Web UI
-At the top of `http://localhost:8000/tracium`, click any simulation button:
-- **Benign**: Generates routine logins, page views, and API calls with latency metrics.
-- **Brute Force**: Ingests rapid consecutive login failures from a single IP address (`203.0.113.100`).
-- **SQLi**: Simulates SQL injection probing against sensitive endpoints.
-- **Cryptomining**: Emits high CPU and abnormal worker execution patterns.
-- **APT Chain**: Simulates a multi-stage attack (reconnaissance → brute force → privilege escalation → exfiltration).
-- **Simulate All**: Runs the full suite with automated throttling to demo end-to-end SIEM capability.
+### Method 1: Web Interface Buttons
+Click any simulation button at the top of the Tracium dashboard:
+- Benign: Sends normal logins and routine page requests with latency values.
+- Brute Force: Sends repeated failed password attempts against user admin.
+- SQLi: Sends database syntax errors and web application firewall alerts.
+- Cryptomining: Sends worker logs showing 99% CPU use and mining pool network traffic.
+- APT Chain: Sends a four-stage sequence (password guessing, login, shell command, data transfer).
+- Simulate All: Runs every test in sequence with a 15-second pause between each.
 
-### Method B: Running Python CLI Scripts
-Execute individual attack generators directly:
+### Method 2: Python Command Line
+Run the scripts directly from your terminal:
 
 ```bash
-# 1. Normal benign activity (verified by AI as False Positive)
 python3 scripts/simulate_benign_activity.py
-
-# 2. Brute force credential stuffing
 python3 scripts/simulate_brute_force.py
-
-# 3. SQL injection attack
 python3 scripts/simulate_sql_injection.py
-
-# 4. Cryptomining anomaly
 python3 scripts/simulate_cryptomining.py
-
-# 5. Advanced Persistent Threat (APT) multi-stage attack chain
 python3 scripts/simulate_attack_chain.py
-
-# 6. Complete end-to-end demo
 python3 scripts/run_demo.py
 ```
 
-### Method C: Direct REST API Triggers
-Trigger attacks programmatically via curl:
+Each script picks a random IP or host address on every run so each execution produces a new alert card at the top of the queue.
+
+### Method 3: REST API Calls
+Trigger tests using curl:
 
 ```bash
 curl -X POST http://localhost:8000/simulate/brute_force
-curl -X POST http://localhost:8000/simulate/sql_injection
+curl -X POST http://localhost:8000/simulate/cryptomining
 curl -X POST http://localhost:8000/simulate/benign
 ```
 
 ---
 
-## What the AI Agent Does
+## How the AI Engine Works
 
-When an incident appears in the queue, selecting it displays the complete AI reasoning cycle:
+When an incident opens, the system runs this process:
 
-1. **What I See (Observations)**:
-   - Factual summary extracted directly from raw telemetry (source IP, targeted service, failed attempt count, log IDs).
-2. **What It Means (Inferences)**:
-   - Synthesizes the threat hypothesis (e.g. *"Attacker is conducting automated dictionary attacks against user 'admin' using an external IP with malicious threat-intel history"*).
-3. **Thinking & Verdict**:
-   - Classifies the incident as **True Positive**, **False Positive**, or **Inconclusive** along with a calculated confidence percentage.
-4. **Recommended Containment (Human-in-the-Loop)**:
-   - Matches findings against predefined incident playbooks (`data/playbooks/`).
-   - Recommends an action (e.g., `block_ip`, `isolate_service`, `disable_user`) with risk tier and rollback instructions.
-   - For high-risk actions, the agent pauses in `pending_approval` state until the analyst clicks **Approve Execution** or **Reject**.
-5. **Audit Trail**:
-   - Live timeline of agent actions, tool calls, and state transitions (`run_started`, `verdict_generated`, `approval_granted`, `run_completed`).
-
----
-
-## Exploring the Grafana Observability Dashboard
-
-Navigate to **[http://localhost:3000](http://localhost:3000)** (Login: `admin` / `admin`).
-
-The pre-provisioned dashboard **"Tracium - Log Dashboard"** provides:
-- **Log Volume by Service**: Stacked bar chart tracking activity across `auth`, `backend`, `frontend`, and `worker`.
-- **Error Heatmap**: Real-time error rate spikes across services.
-- **Auth Failure Timeline**: Track credential access attempts grouped by source IP.
-- **Service Latency (p99)**: Latency distribution calculated from unmarshaled log payloads (`latencyMs`).
-- **Live Log Stream**: Direct streaming LogQL log viewer powered by Loki (`{job="tracium"}`).
+1. Facts (What I See):
+   Extracts concrete data from logs (source IP, targeted service, attempt count, event IDs).
+2. Inference (What It Means):
+   Explains the attacker's intent and maps the activity to MITRE ATT&CK techniques.
+3. Verdict:
+   Classifies the incident as `True Positive`, `False Positive`, or `Inconclusive` with a confidence score.
+4. Response Plan:
+   Picks an action from local playbooks (`data/playbooks/`), such as `block_ip`, `isolate_service`, or `disable_user`.
+5. Human Approval Gate:
+   - Low-risk external actions (such as blocking an external botnet IP) run automatically.
+   - High-risk actions (such as isolating an internal host or disabling an account) pause execution in `pending_approval` state.
+   - The web dashboard displays Approve Execution and Reject buttons. The system takes no action until an analyst clicks a button.
+6. Audit Trail:
+   Records every state change and decision (`run_started`, `verdict_generated`, `approval_granted`, `action_executed`).
 
 ---
 
-## REST API Reference
+## Grafana Dashboard
 
-Full interactive documentation is available at **[`http://localhost:8000/docs`](http://localhost:8000/docs)**.
+Open [http://localhost:3000](http://localhost:3000) (Login: `admin` / `admin`).
 
-### Key Endpoints
+The pre-built dashboard Tracium - Log Dashboard includes:
+- Log Volume by Service: Bar chart tracking lines from auth, backend, frontend, and worker.
+- Error Heatmap: Error frequency across services over time.
+- Auth Failure Timeline: Failed authentication attempts grouped by source IP.
+- Service Latency (p99): 99th percentile response times read from log fields (`latencyMs`).
+- Live Log Stream: Direct streaming log viewer from Loki.
 
-| Category | Method | Endpoint | Description |
-| :--- | :--- | :--- | :--- |
-| **UI** | `GET` | `/tracium` | Tracium Threat Ops Frontend |
-| **Ingestion** | `POST` | `/logs/ingest` | Ingest batched JSON log entries with rate limiting |
-| **Logs** | `GET` | `/logs/query` | Filter logs by service, level, IP, user, or time window |
-| **Incidents** | `GET` | `/incidents` | List correlated incidents |
-| | `GET` | `/incidents/{id}` | Retrieve incident details and timeline |
-| | `PATCH`| `/incidents/{id}/state`| Update incident state (`open`, `investigating`, `resolved`) |
-| | `POST` | `/incidents/{id}/false-positive` | Mark as false positive & register auto-suppression rule |
-| **AI Agent** | `POST` | `/agents/incidents/{id}/run` | Manually launch an AI investigation run |
-| | `GET` | `/agents/runs` | List active and historical agent runs |
-| | `GET` | `/agents/runs/{id}` | Inspect investigation state, verdict, and proposed action |
-| | `POST` | `/agents/runs/{id}/approve` | Approve containment action execution |
-| | `POST` | `/agents/runs/{id}/reject` | Reject containment action with reason |
-| | `GET` | `/agents/runs/{id}/events` | View execution trace and audit logs |
-| **Simulate** | `POST` | `/simulate/{attack_type}` | Trigger background attack simulation scripts |
-| **Health** | `GET` | `/health` | Ingestion engine health and store stats |
+---
+
+## API Reference Summary
+
+Interactive API documentation runs at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+| Method | Endpoint | Purpose |
+| :--- | :--- | :--- |
+| `GET` | `/tracium` | Web application dashboard |
+| `POST` | `/logs/ingest` | Ingest batch of JSON log records |
+| `GET` | `/logs/query` | Filter logs by service, level, IP, or time |
+| `GET` | `/incidents` | List detected incidents |
+| `GET` | `/incidents/{id}` | Read incident details and timeline |
+| `PATCH`| `/incidents/{id}/state`| Update incident state |
+| `POST` | `/incidents/{id}/false-positive` | Mark false positive and suppress future alerts |
+| `POST` | `/agents/incidents/{id}/run` | Start AI investigation |
+| `GET` | `/agents/runs` | List investigation runs |
+| `GET` | `/agents/runs/{id}` | Inspect investigation state and verdict |
+| `POST` | `/agents/runs/{id}/approve` | Approve response action |
+| `POST` | `/agents/runs/{id}/reject` | Reject response action |
+| `GET` | `/agents/runs/{id}/events` | Read audit trail events |
+| `POST` | `/simulate/{attack_type}` | Run an attack simulation |
+| `GET` | `/health` | Ingestion engine health and store counts |
 
 ---
 
@@ -239,59 +237,58 @@ Full interactive documentation is available at **[`http://localhost:8000/docs`](
 ```
 Tracium/
 ├── app/
-│   ├── agents/                 # LangGraph Agentic AI Framework
-│   │   ├── graph.py            # Graph workflow definition & state machine
-│   │   ├── llm.py              # Gemini model configuration
-│   │   ├── models.py           # Verdict, Evidence & Response Pydantic models
-│   │   ├── runner.py           # Threaded background runner & checkpointer
-│   │   ├── state.py            # InvestigationState schema
-│   │   ├── nodes/              # Graph execution nodes (triage, investigate, verdict, etc.)
-│   │   └── tools/              # Telemetry search & threat intel tools
-│   ├── api/                    # FastAPI routes & middleware
-│   │   ├── routes/             # Ingestion, incidents, runs, simulations
-│   │   └── middleware.py       # Payload size limiting
-│   ├── core/                   # Rate limiting & global settings
-│   ├── static/                 # Threat Ops Web Dashboard
-│   │   ├── index.html          # Clean, modern single-page dashboard
-│   │   └── js/                 # Modular vanilla ES components
-│   ├── incident_engine.py      # SIEM correlation rules engine
-│   ├── incident_models.py      # Incident and security alert schemas
-│   ├── log_store.py            # In-memory log store + file persistence
-│   ├── models.py               # Log telemetry models
-│   └── main.py                 # FastAPI application root
+│   ├── agents/                 # LangGraph investigation engine
+│   │   ├── graph.py            # State graph definition
+│   │   ├── llm.py              # Gemini client setup
+│   │   ├── models.py           # Pydantic models for verdicts and proposals
+│   │   ├── runner.py           # Threaded background runner
+│   │   ├── state.py            # Investigation state definition
+│   │   ├── nodes/              # Graph execution nodes
+│   │   └── tools/              # Log query and threat intel tools
+│   ├── api/                    # HTTP routes and middleware
+│   │   ├── routes/             # Ingestion, incidents, runs, simulation routes
+│   │   └── middleware.py       # Request size limit middleware
+│   ├── core/                   # Rate limiting settings
+│   ├── static/                 # Web dashboard assets
+│   │   ├── index.html          # Dashboard page
+│   │   └── js/                 # Modular ES scripts
+│   ├── incident_engine.py      # Rule correlation engine
+│   ├── incident_models.py      # Incident data classes
+│   ├── log_store.py            # In-memory log database
+│   ├── models.py               # Log entry models
+│   └── main.py                 # Application entry point
 ├── data/
-│   └── playbooks/              # Response containment playbooks (Markdown)
-├── dashboards/                 # Grafana provisioning & dashboard JSON
+│   └── playbooks/              # Containment playbook files
+├── dashboards/                 # Grafana dashboard configurations
 ├── datasources/                # Grafana Loki datasource configuration
-├── promtail/                   # Promtail scrape configuration
-├── scripts/                    # Simulation scripts (benign, brute force, sqli, etc.)
-├── tests/                      # Pytest test suite & policy evaluations
-├── docker-compose.yaml         # Complete stack orchestration
-├── Dockerfile                  # API container definition
-└── pyproject.toml              # UV / Python dependency management
+├── promtail/                   # Promtail configuration
+├── scripts/                    # Attack simulation scripts
+├── tests/                      # Automated test suite
+├── docker-compose.yaml         # Container stack configuration
+├── Dockerfile                  # API service image definition
+└── pyproject.toml              # Python project configuration
 ```
 
 ---
 
-## Troubleshooting & FAQ
+## Troubleshooting
 
-### 1. Gemini Quota Limit (`RESOURCE_EXHAUSTED 429`)
-- The AI pipeline is pre-configured with **unified single-turn investigations**, using **exactly 1 Gemini request per incident** (down from 5–6 calls previously).
-- To keep your rate limits safe, click simulations one at a time or use the built-in 15-second throttle in `scripts/run_demo.py`.
+### Gemini Quota Errors (`429 RESOURCE_EXHAUSTED`)
+- The investigation engine runs in a single turn, using one API request per incident.
+- To stay within free-tier limits, run simulations individually or use the 15-second pause in `scripts/run_demo.py`.
 
-### 2. Grafana Dashboard Shows "No Data"
-- If Grafana panels appear empty on first launch:
-- Run a simulation (e.g. click **Benign** or **Simulate All**). Promtail will scrape the generated `/app/logs/app.json` file and stream it into Loki within 5 seconds.
-- In Grafana, verify the time picker in the top right is set to **"Last 15 minutes"** or **"Last 1 hour"**.
+### Grafana Shows No Data
+- Run a simulation (such as Benign or Brute Force) to generate logs. Promtail forwards entries to Loki within five seconds.
+- In Grafana, verify the time range in the top-right corner covers the last 15 minutes.
 
-### 3. Restarting or Rebuilding the Environment
-If you modify backend Python code or configurations:
+### Restarting the Services
+To apply changes to code or configuration:
 
 ```bash
-# Quick restart
+# Restart API service
 sudo -E docker compose restart api
 
-# Full clean rebuild
+# Rebuild full stack
 sudo -E docker compose down
 sudo -E docker compose up -d --build
 ```

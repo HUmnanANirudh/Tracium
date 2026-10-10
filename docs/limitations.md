@@ -1,81 +1,54 @@
-# Tracium Limitations
+# System Scope and Limitations
 
-This document describes known limitations of the Tracium system for log aggregation and incident correlation.
+This document lists the technical trade-offs, scope constraints, and production requirements for the Tracium project.
 
-## Log Storage
+---
 
-### Loki Not Ideal for Deep Analytics
+## 1. Log Storage and Querying
 
-Loki is optimized for log aggregation and label-based filtering, not deep analytics:
+### In-Memory Storage
+- Current State: The `LogStore` class stores logs in Python memory for fast lookups.
+- Impact: Restarting the container clears all stored logs.
+- Production Requirement: Replace the in-memory array with an indexed datastore such as PostgreSQL, TimescaleDB, or ClickHouse.
 
-- **Limited query expressiveness**: Loki's LogQL is powerful but doesn't replace SQL-based analytics
-- **No join operations**: Cannot correlate across multiple log streams efficiently
-- **Aggregation latency**: Complex aggregations require pre-computation or external tools
-- **Alternative**: For deep analytics, consider Elasticsearch or ClickHouse
+### Loki Query Constraints
+- Current State: Loki indexes logs using service labels, while Promtail tails `/app/logs/app.json`.
+- Impact: Complex analytical joins across disparate streams require post-processing.
+- Production Requirement: For long-term analytical aggregations across months of data, route logs to an analytical store alongside Loki.
 
-### Limited Retention
+---
 
-- **In-memory store**: The `LogStore` class holds all logs in memory
-- **No persistence**: Logs are lost on restart
-- **Memory pressure**: Unlimited growth will cause OOM
-- **Production need**: Use Loki's storage engine or external database for persistence
+## 2. Threat Detection
 
-## Anomaly Detection
+### Rule-Based Correlation
+- Current State: Detection rules use static thresholds (5 failed logins in 5 minutes, 10 errors in 1 minute, latency above 2 seconds).
+- Impact: The system cannot establish dynamic baselines for user behavior.
+- Production Requirement: Combine deterministic rules with statistical or machine-learning models to flag baseline shifts.
 
-### No ML Anomaly Detection
+### Single-Instance Processing
+- Current State: All correlation rules run inside a single FastAPI process.
+- Impact: Scaling to multiple nodes without shared storage would cause split-brain deduplication.
+- Production Requirement: Use Redis or Apache Kafka to coordinate deduplication keys and event streams across multiple worker instances.
 
-The current incident correlation system uses rule-based detection only:
+---
 
-- **Static thresholds**: All thresholds (5 failed logins, 10 errors/min, p99 > 2s) are hardcoded
-- **No learning**: System cannot adapt to baselines
-- **No behavioral analysis**: No user/service baseline comparison
-- **Future work**: Integrate ML models (isolation forest, LSTM, etc.) for anomaly scoring
+## 3. Autonomous Execution
 
-### No Distributed Consensus
+### Simulated Containment Actions
+- Current State: The `SimulatedResponseExecutor` records containment actions in the audit store without modifying real firewalls or cloud security groups.
+- Impact: The system safely demonstrates containment logic during tests, but does not alter infrastructure.
+- Production Requirement: Connect the executor to cloud APIs (such as AWS Security Groups, Cloudflare WAF, or Kubernetes Network Policies) using authenticated credentials.
 
-- **Single-node architecture**: All processing happens on one instance
-- **No coordination**: Multiple instances would have split-brain on deduplication
-- **Clock dependency**: Uses `datetime.utcnow()` which can skew across nodes
-- **Production need**: Redis or etcd for distributed state; NTP for clock sync
+### API Security
+- Current State: API routes operate without authentication headers in the local development setup.
+- Impact: Suitable for demonstration and evaluation, but unsafe for public networks.
+- Production Requirement: Require TLS encryption, mutual authentication, and JSON Web Tokens for all ingestion and management endpoints.
 
-## Architecture
+---
 
-### Single-Node Architecture
+## 4. Language Model Integration
 
-The FastAPI application runs as a single process:
-
-- **No horizontal scaling**: Cannot scale behind a load balancer without state sharing
-- **No hot standby**: No failover mechanism
-- **Resource limits**: Single-process memory and CPU caps
-
-### Simulated Environment
-
-This is a demonstration/portfolio system:
-
-- **Mock data**: `services/log_generator.py` produces synthetic logs
-- **No real integrations**: No actual SSH, firewall, or cloud provider integrations
-- **Toy-grade**: Suitable for learning and demonstration, not production deployment
-
-## Security Considerations
-
-- **No authentication**: API endpoints are open (no JWT, API keys)
-- **No encryption**: Logs may contain sensitive data in plaintext
-- **No audit logging**: API access is not audited
-- **CORS open**: Middleware allows all origins
-
-## Performance
-
-- **In-memory scanning**: Log queries iterate over all logs linearly
-- **No indexing**: No indices on service, level, timestamp fields
-- **O(n) queries**: Query complexity scales with log volume
-
-## Future Improvements
-
-| Area | Improvement |
-|------|-------------|
-| Storage | Replace in-memory store with TimescaleDB or Elasticsearch |
-| Analytics | Add Elasticsearch for Kibana-powered analytics |
-| ML | Integrate Eldarica or similar for anomaly scoring |
-| Scaling | Add Redis for distributed state; Kubernetes for HA |
-| Security | Add API authentication, TLS, audit logging |
-| Retention | Implement log rotation and archival policies |
+### Quota and Rate Limits
+- Current State: Free-tier Gemini accounts enforce request limits (5 requests per minute, 20 requests per day on preview models).
+- Design Choice: Tracium uses a unified single-turn investigation schema on `gemini-3.1-flash-lite`. Each incident uses exactly one API call.
+- Production Requirement: Use production-tier Gemini API credentials with enterprise quota allocations for high-throughput environments.
