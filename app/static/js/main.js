@@ -9,16 +9,30 @@ class AppState {
     
     // Expose to window for inline onclick handlers
     window.appState = this;
-    window.simulate = async (type) => {
+    window.simulate = async (type, event) => {
+      let btn = null;
+      let origText = '';
       try {
-        const btn = event.currentTarget;
-        const origText = btn.innerHTML;
-        btn.innerHTML = '<span class="animate-pulse">WAIT...</span>';
+        if (event && event.currentTarget) {
+          btn = event.currentTarget;
+          origText = btn.innerHTML;
+          btn.innerHTML = '<span class="animate-pulse">WAIT...</span>';
+          btn.disabled = true;
+        }
         await triggerSimulation(type);
-        setTimeout(() => btn.innerHTML = origText, 1000);
+        if (btn) {
+          setTimeout(() => {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+          }, 1500);
+        }
         this.tick(true);
       } catch (e) {
         this.showError(`Simulation failed: ${e}`);
+        if (btn) {
+          btn.innerHTML = origText;
+          btn.disabled = false;
+        }
       }
     };
   }
@@ -66,7 +80,7 @@ class AppState {
       
       const incList = document.getElementById('inc-list');
       if (incidents.length === 0) {
-        incList.innerHTML = '<div class="text-xs font-mono text-gray-500 text-center mt-10 p-4 border border-dashed border-white/10 rounded">SYSTEM SECURE<br><br>Awaiting threats...</div>';
+        incList.innerHTML = '<div class="text-xs font-mono text-gray-500 text-center mt-10 p-6 bg-white border border-dashed border-gray-300 rounded-xl">SYSTEM SECURE<br><br>Awaiting threats...</div>';
       } else {
         incList.innerHTML = incidents.map(i => createIncidentCard(i, i.id === this.selectedIncidentId)).join('');
       }
@@ -78,10 +92,12 @@ class AppState {
           aiList.innerHTML = createRunCard(runs[runIndex], events[runIndex]);
         } else {
           aiList.innerHTML = `
-            <div class="absolute inset-0 flex items-center justify-center text-gray-400 font-mono text-sm">
-              <div class="flex flex-col items-center gap-4">
-                <div class="h-6 w-6 rounded-sm bg-brand-base animate-pulse"></div>
-                <p class="tracking-widest uppercase">Initializing Context...</p>
+            <div class="absolute inset-0 flex items-center justify-center text-gray-500 font-mono text-sm">
+              <div class="flex flex-col items-center gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div class="h-6 w-6 rounded flex items-center justify-center bg-brand-glow text-brand-base animate-pulse">
+                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <p class="tracking-widest uppercase text-xs font-bold text-gray-400">Initializing Context...</p>
               </div>
             </div>
           `;

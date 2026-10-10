@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Tracium SIEM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -14,14 +13,15 @@
             mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
           },
           colors: {
-            surface: { 100: '#1e1e24', 200: '#16161b', 300: '#0f0f13' },
-            brand: { base: '#3b82f6', glow: '#60a5fa' },
+            surface: { 100: '#ffffff', 200: '#f8f9fa', 300: '#f1f3f4' },
+            brand: { base: '#1a73e8', glow: '#e8f0fe' },
+            border: '#dadce0',
             status: { 
-              critical: '#ef4444', 
-              high: '#f97316', 
-              medium: '#eab308', 
-              low: '#3b82f6',
-              success: '#10b981'
+              critical: '#d93025', 
+              high: '#e37400', 
+              medium: '#f29900', 
+              low: '#1a73e8',
+              success: '#1e8e3e'
             }
           }
         }
@@ -32,72 +32,72 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
     
     body {
-      background-color: #0f0f13;
-      color: #e5e7eb;
+      background-color: #f8f9fa;
+      color: #202124;
     }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
     
     .glass-panel {
-      background: rgba(30, 30, 36, 0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
     }
   </style>
   <script type="module" src="/static/js/main.js"></script>
 </head>
-<body class="h-screen flex flex-col font-sans overflow-hidden antialiased selection:bg-brand-base selection:text-white">
+<body class="h-screen flex flex-col font-sans overflow-hidden antialiased selection:bg-brand-glow selection:text-brand-base">
 
-  <header class="h-14 border-b border-white/10 glass-panel flex justify-between items-center px-6 shrink-0 z-20">
+  <header class="h-14 border-b border-border bg-white flex justify-between items-center px-6 shrink-0 z-20">
     <div class="flex items-center space-x-3">
-      <div class="h-5 w-5 bg-brand-base rounded-sm shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-      <h1 class="text-lg font-bold tracking-tight text-white">Tracium</h1>
+      <div class="h-5 w-5 bg-brand-base rounded flex items-center justify-center">
+        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </div>
+      <h1 class="text-lg font-bold tracking-tight text-gray-800">Tracium <span class="font-normal text-gray-500 ml-1">Threat Ops</span></h1>
     </div>
     
     <div class="flex items-center space-x-4">
-      <div class="flex items-center space-x-1 bg-surface-200 p-1 rounded border border-white/5" id="sim-controls">
-        <button onclick="window.simulate('benign')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">Benign</button>
-        <button onclick="window.simulate('brute_force')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">Brute Force</button>
-        <button onclick="window.simulate('sql_injection')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">SQLi</button>
-        <button onclick="window.simulate('cryptomining')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">Cryptomining</button>
-        <button onclick="window.simulate('attack_chain')" class="px-3 py-1 text-xs font-bold bg-transparent text-gray-300 hover:text-white hover:bg-surface-300 rounded transition-all">APT Chain</button>
-        <button onclick="window.simulate('all')" class="ml-2 px-4 py-1 text-xs font-extrabold bg-brand-base text-white hover:bg-brand-glow rounded shadow transition-all">SIMULATE ALL</button>
+      <div class="flex items-center space-x-1 bg-surface-300 p-1 rounded-full border border-border" id="sim-controls">
+        <button onclick="window.simulate('benign', event)" class="px-4 py-1 text-xs font-semibold bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed">Benign</button>
+        <button onclick="window.simulate('brute_force', event)" class="px-4 py-1 text-xs font-semibold bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed">Brute Force</button>
+        <button onclick="window.simulate('sql_injection', event)" class="px-4 py-1 text-xs font-semibold bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed">SQLi</button>
+        <button onclick="window.simulate('cryptomining', event)" class="px-4 py-1 text-xs font-semibold bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed">Cryptomining</button>
+        <button onclick="window.simulate('attack_chain', event)" class="px-4 py-1 text-xs font-semibold bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed">APT Chain</button>
+        <button onclick="window.simulate('all', event)" class="ml-2 px-5 py-1 text-xs font-bold bg-brand-base text-white hover:bg-blue-700 rounded-full shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed">Simulate All</button>
       </div>
-      <div id="stats" class="text-xs font-mono text-gray-400 bg-surface-200 px-3 py-1.5 rounded border border-white/5 min-w-[120px] text-center">
+      <div id="stats" class="text-xs font-mono text-gray-500 bg-surface-300 px-4 py-1.5 rounded-full border border-border min-w-[120px] text-center">
         Connecting...
       </div>
     </div>
   </header>
   
   <div class="flex-1 flex overflow-hidden">
-    <!-- Left: Incident List -->
-    <div class="w-96 flex flex-col border-r border-white/10 bg-surface-200 z-10 shrink-0">
-      <div class="h-10 border-b border-white/5 flex items-center px-4 bg-surface-100">
-        <h2 class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Alert Queue</h2>
+    <div class="w-96 flex flex-col border-r border-border bg-surface-200 z-10 shrink-0">
+      <div class="h-10 border-b border-border flex items-center px-4 bg-white">
+        <h2 class="text-xs font-bold tracking-wide text-gray-500 uppercase">Alert Queue</h2>
       </div>
-      <div id="inc-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+      <div id="inc-list" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
     </div>
     
-    <!-- Right: AI Investigation Details -->
-    <div class="flex-1 flex flex-col bg-surface-300 relative z-0">
-      <div class="h-10 border-b border-white/10 flex items-center justify-between px-6 bg-surface-100">
-        <h2 class="text-xs font-semibold tracking-wider text-gray-300 uppercase">
+    <div class="flex-1 flex flex-col bg-surface-100 relative z-0">
+      <div class="h-10 border-b border-border flex items-center justify-between px-6 bg-white">
+        <h2 class="text-xs font-bold tracking-wide text-gray-500 uppercase">
           Investigation Context
         </h2>
-        <span id="selected-incident-id" class="text-xs font-mono text-gray-500"></span>
+        <span id="selected-incident-id" class="text-xs font-mono text-gray-400"></span>
       </div>
-      <div id="ai-list" class="flex-1 overflow-y-auto p-6 relative">
-        <div class="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+      <div id="ai-list" class="flex-1 overflow-y-auto p-8 relative bg-surface-100">
+        <div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
           Select an alert from the queue to view investigation details.
         </div>
       </div>
     </div>
   </div>
-  
-  <!-- Global Error Banner -->
-  <div id="err" class="fixed bottom-0 left-0 right-0 text-center text-xs font-mono font-bold text-white transition-transform translate-y-full px-4 py-1.5 z-50"></div>
+
+  <div id="err" class="fixed bottom-0 left-0 right-0 text-center text-xs font-mono font-bold text-white transition-transform translate-y-full px-4 py-2 z-50"></div>
 
 </body>
 </html>
