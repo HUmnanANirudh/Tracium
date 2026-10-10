@@ -7,6 +7,9 @@ def main():
     logs = []
     base_time = int(time.time()) - 60
     
+    import random
+    user_ip = f"203.0.113.{random.randint(200, 254)}"
+
     # Successful logins
     for i in range(2):
         logs.append({
@@ -15,7 +18,7 @@ def main():
             "timestamp": datetime.fromtimestamp(base_time + i*5, tz=timezone.utc).isoformat(),
             "message": f"Successful login for user alice",
             "userId": "alice",
-            "ip": "203.0.113.200",
+            "ip": user_ip,
             "eventType": "login_success"
         })
     
@@ -26,7 +29,7 @@ def main():
             "level": "info",
             "timestamp": datetime.fromtimestamp(base_time + i*2, tz=timezone.utc).isoformat(),
             "message": f"Page view /home",
-            "ip": "203.0.113.200",
+            "ip": user_ip,
             "eventType": "page_view"
         })
         
@@ -37,7 +40,7 @@ def main():
             "level": "info",
             "timestamp": datetime.fromtimestamp(base_time + i*2, tz=timezone.utc).isoformat(),
             "message": f"Processed API request",
-            "ip": "203.0.113.200",
+            "ip": user_ip,
             "latencyMs": 45.5 + i,
             "eventType": "api_request"
         })

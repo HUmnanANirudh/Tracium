@@ -7,6 +7,9 @@ def main():
     logs = []
     base_time = int(time.time()) - 600 # 10 mins ago
     
+    import random
+    attacker_ip = f"203.0.113.{random.randint(101, 150)}"
+    
     # 1. Brute force
     for i in range(8):
         logs.append({
@@ -15,7 +18,7 @@ def main():
             "timestamp": datetime.fromtimestamp(base_time + i*5, tz=timezone.utc).isoformat(),
             "message": f"Failed login attempt for user admin",
             "userId": "admin",
-            "ip": "203.0.113.102",
+            "ip": attacker_ip,
             "eventType": "login_failed"
         })
     
@@ -26,7 +29,7 @@ def main():
         "timestamp": datetime.fromtimestamp(base_time + 70, tz=timezone.utc).isoformat(),
         "message": f"Successful login for user admin",
         "userId": "admin",
-        "ip": "203.0.113.102",
+        "ip": attacker_ip,
         "eventType": "login_success"
     })
 
@@ -37,7 +40,7 @@ def main():
         "timestamp": datetime.fromtimestamp(base_time + 90, tz=timezone.utc).isoformat(),
         "message": f"Shell command executed: whoami",
         "userId": "admin",
-        "ip": "203.0.113.102",
+        "ip": attacker_ip,
         "eventType": "shell_execution"
     })
 
@@ -49,7 +52,7 @@ def main():
             "timestamp": datetime.fromtimestamp(base_time + 120 + i*10, tz=timezone.utc).isoformat(),
             "message": f"Large data transfer initiated",
             "userId": "admin",
-            "ip": "203.0.113.102",
+            "ip": attacker_ip,
             "eventType": "data_transfer"
         })
 

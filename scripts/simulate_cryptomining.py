@@ -7,13 +7,16 @@ def main():
     logs = []
     base_time = int(time.time()) - 360 
     
+    import random
+    host_ip = f"10.0.0.{random.randint(10, 240)}"
+    
     for i in range(15):
         logs.append({
             "service": "worker",
             "level": "warning",
             "timestamp": datetime.fromtimestamp(base_time + i*60, tz=timezone.utc).isoformat(),
             "message": "CPU utilization exceeded 99% for process 'xmrig'",
-            "ip": "10.0.0.5",
+            "ip": host_ip,
             "eventType": "high_cpu"
         })
         
@@ -22,7 +25,7 @@ def main():
         "level": "warning",
         "timestamp": datetime.fromtimestamp(base_time + 120, tz=timezone.utc).isoformat(),
         "message": "Outbound connection to known mining pool port 3333",
-        "ip": "10.0.0.5",
+        "ip": host_ip,
         "eventType": "network_anomaly"
     })
 

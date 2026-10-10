@@ -7,12 +7,15 @@ def main():
     logs = []
     base_time = int(time.time()) - 180 
     
+    import random
+    attacker_ip = f"203.0.113.{random.randint(20, 89)}"
+
     logs.append({
         "service": "frontend",
         "level": "warning",
         "timestamp": datetime.fromtimestamp(base_time, tz=timezone.utc).isoformat(),
         "message": "Suspicious input detected: ' OR 1=1 --",
-        "ip": "203.0.113.88",
+        "ip": attacker_ip,
         "eventType": "waf_alert"
     })
     
@@ -22,7 +25,7 @@ def main():
             "level": "error",
             "timestamp": datetime.fromtimestamp(base_time + 10 + i, tz=timezone.utc).isoformat(),
             "message": "Database syntax error near 'OR 1=1'",
-            "ip": "203.0.113.88",
+            "ip": attacker_ip,
             "eventType": "db_error"
         })
 

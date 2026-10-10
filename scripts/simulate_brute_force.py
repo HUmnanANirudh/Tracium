@@ -7,6 +7,9 @@ def main():
     logs = []
     base_time = int(time.time()) - 300 # 5 minutes ago
     
+    import random
+    attacker_ip = f"203.0.113.{random.randint(100, 199)}"
+
     for i in range(8):
         logs.append({
             "service": "auth",
@@ -14,7 +17,7 @@ def main():
             "timestamp": datetime.fromtimestamp(base_time + i*5, tz=timezone.utc).isoformat(),
             "message": f"Failed login attempt for user admin",
             "userId": "admin",
-            "ip": "203.0.113.100",
+            "ip": attacker_ip,
             "eventType": "login_failed"
         })
     
