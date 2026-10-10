@@ -72,7 +72,7 @@ class AppState {
         runs.map(r => getJSON(`/agents/runs/${r.run_id}/events`).then(d => d.events))
       );
       
-      document.getElementById('stats').textContent = `${incidents.length} THREATS · ${runs.length} RUNS`;
+      document.getElementById('stats').textContent = `${incidents.length} threats · ${runs.length} runs`;
 
       const hash = JSON.stringify([incidents, runs, events, this.selectedIncidentId]);
       if (hash === this.lastHash && !force) return;
@@ -80,7 +80,15 @@ class AppState {
       
       const incList = document.getElementById('inc-list');
       if (incidents.length === 0) {
-        incList.innerHTML = '<div class="text-xs font-mono text-gray-500 text-center mt-10 p-6 bg-white border border-dashed border-gray-300 rounded-xl">SYSTEM SECURE<br><br>Awaiting threats...</div>';
+        incList.innerHTML = `
+          <div class="text-center py-12 px-4">
+            <div class="w-8 h-8 mx-auto mb-3 text-gray-300 flex items-center justify-center rounded-full bg-gray-100">
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <p class="text-xs font-medium text-gray-700">No active threats</p>
+            <p class="text-[11px] text-gray-400 mt-1">Simulate an attack above to start investigation.</p>
+          </div>
+        `;
       } else {
         incList.innerHTML = incidents.map(i => createIncidentCard(i, i.id === this.selectedIncidentId)).join('');
       }
@@ -92,18 +100,18 @@ class AppState {
           aiList.innerHTML = createRunCard(runs[runIndex], events[runIndex]);
         } else {
           aiList.innerHTML = `
-            <div class="absolute inset-0 flex items-center justify-center text-gray-500 font-mono text-sm">
-              <div class="flex flex-col items-center gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div class="h-6 w-6 rounded-full border-2 border-brand-base border-t-transparent animate-spin"></div>
-                <p class="tracking-widest uppercase text-xs font-bold text-gray-400">Initializing Context...</p>
+            <div class="absolute inset-0 flex items-center justify-center text-gray-500">
+              <div class="flex items-center gap-3 bg-white px-5 py-3 rounded-lg border border-gray-200 shadow-xs">
+                <div class="h-4 w-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+                <span class="text-xs text-gray-600 font-medium">Initializing investigation...</span>
               </div>
             </div>
           `;
         }
       } else {
         aiList.innerHTML = `
-          <div class="absolute inset-0 flex items-center justify-center text-gray-500 font-mono text-sm">
-            <p class="tracking-widest uppercase opacity-50">NO CONTEXT SELECTED</p>
+          <div class="absolute inset-0 flex items-center justify-center text-gray-400">
+            <p class="text-xs font-normal">Select an alert from the queue to view investigation details.</p>
           </div>
         `;
       }

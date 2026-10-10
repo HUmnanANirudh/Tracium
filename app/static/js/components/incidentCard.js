@@ -1,27 +1,30 @@
-import { esc, SEVERITY_COLORS } from '../utils/formatting.js';
+import { esc, SEVERITY_STYLES } from '../utils/formatting.js';
 
 export function createIncidentCard(i, isSelected) {
-  const sevStyle = SEVERITY_COLORS[i.severity] || SEVERITY_COLORS.low;
+  const sev = SEVERITY_STYLES[i.severity] || SEVERITY_STYLES.low;
+  const sevLabel = i.severity ? i.severity.charAt(0).toUpperCase() + i.severity.slice(1) : 'Low';
+  const typeLabel = (i.type || 'Incident').replace(/_/g, ' ');
   
-  const baseClasses = 'cursor-pointer p-4 rounded-xl border transition-all duration-200 select-none bg-white';
+  const baseClasses = 'cursor-pointer p-4 rounded-lg border transition-all duration-150 select-none';
   const stateClasses = isSelected 
-    ? 'border-brand-base bg-blue-50/30 shadow-sm' 
-    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm shadow-sm';
+    ? 'border-blue-600 ring-1 ring-blue-600 bg-blue-50/20 shadow-sm' 
+    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 bg-white';
 
   return `
     <div onclick="window.appState.selectIncident('${esc(i.id)}')" class="${baseClasses} ${stateClasses}">
-      <div class="flex justify-between items-start mb-2">
-        <b class="text-sm font-semibold text-gray-900 tracking-tight">${esc(i.type).replace(/_/g, ' ')}</b>
-        <span class="text-[10px] px-2 py-0.5 rounded-full border uppercase font-bold tracking-wider ${sevStyle}">
-          ${esc(i.severity)}
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <h3 class="text-xs font-semibold text-gray-900 truncate tracking-tight capitalize">${esc(typeLabel)}</h3>
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border shrink-0 ${sev.badge}">
+          <span class="w-1.5 h-1.5 rounded-full ${sev.dot}"></span>
+          ${esc(sevLabel)}
         </span>
       </div>
-      <div class="text-xs text-gray-600 mb-3 line-clamp-2 leading-relaxed">
+      <p class="text-xs text-gray-600 mb-3 line-clamp-2 leading-relaxed">
         ${esc(i.message)}
-      </div>
-      <div class="flex justify-between items-center text-[10px] text-gray-400 font-mono">
-        <span class="uppercase tracking-wider font-semibold text-gray-500">${esc(i.state)} · ${esc(i.event_count)} EVT</span>
-        <span class="opacity-70" title="${esc(i.id)}">${esc(i.id).split('-')[0] + '-...'}</span>
+      </p>
+      <div class="flex items-center justify-between text-[11px] text-gray-400 font-mono pt-1">
+        <span class="text-gray-500 font-medium">${esc(i.state)} · ${esc(i.event_count)} evt</span>
+        <span class="text-gray-400 truncate max-w-[110px]" title="${esc(i.id)}">${esc(i.id)}</span>
       </div>
     </div>
   `;

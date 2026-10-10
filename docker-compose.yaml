@@ -40,6 +40,9 @@ services:
       - LOG_DIR=/app/logs
     volumes:
       - ./services/logs:/app/logs
+      - ./app:/app/app
+      - ./scripts:/app/scripts
+      - ./data:/app/data
     networks:
       - tracium
 
