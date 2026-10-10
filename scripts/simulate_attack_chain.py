@@ -8,7 +8,7 @@ def main():
     base_time = int(time.time()) - 600 # 10 mins ago
     
     # 1. Brute force
-    for i in range(12):
+    for i in range(8):
         logs.append({
             "service": "auth",
             "level": "error",

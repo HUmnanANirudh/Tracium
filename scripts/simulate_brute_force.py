@@ -7,7 +7,7 @@ def main():
     logs = []
     base_time = int(time.time()) - 300 # 5 minutes ago
     
-    for i in range(12):
+    for i in range(8):
         logs.append({
             "service": "auth",
             "level": "error",

@@ -7,16 +7,16 @@ def main():
     logs = []
     base_time = int(time.time()) - 60
     
-    # Just a few failed logins, not enough to trigger brute force
-    for i in range(3):
+    # Successful logins
+    for i in range(2):
         logs.append({
             "service": "auth",
-            "level": "error",
+            "level": "info",
             "timestamp": datetime.fromtimestamp(base_time + i*5, tz=timezone.utc).isoformat(),
-            "message": f"Failed login attempt for user john",
-            "userId": "john",
-            "ip": "203.0.113.101",
-            "eventType": "login_failed"
+            "message": f"Successful login for user alice",
+            "userId": "alice",
+            "ip": "203.0.113.200",
+            "eventType": "login_success"
         })
     
     # Normal frontend traffic
@@ -26,7 +26,7 @@ def main():
             "level": "info",
             "timestamp": datetime.fromtimestamp(base_time + i*2, tz=timezone.utc).isoformat(),
             "message": f"Page view /home",
-            "ip": "203.0.113.5",
+            "ip": "203.0.113.200",
             "eventType": "page_view"
         })
 
