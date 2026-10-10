@@ -347,6 +347,32 @@ class IncidentEngine:
 
         return None, None
 
+
+    def check_benign_activity(self, log: LogEntry) -> tuple[Incident | None, str | None]:
+        if log.eventType == "login_success":
+            ip = log.ip or "unknown"
+            dedup_key = f"benign_activity:{ip}"
+            
+            if self.dedup.is_suppressed(dedup_key)[0]:
+                return None, None
+                
+            self.dedup.add_timeline_event(dedup_key, log)
+            now = datetime.now(timezone.utc)
+            incident = Incident(
+                id=f"benign-{ip}-{now.strftime('%Y%m%d%H%M%S')}",
+                type=IncidentType.BENIGN_ACTIVITY,
+                severity=IncidentSeverity.LOW,
+                service=str(log.service),
+                message=f"Routine successful login from {ip}",
+                timestamp=now,
+                details={"ip": ip, "user": log.userId},
+                deduplication_key=dedup_key,
+            )
+            incident.confidence_score = self.calculate_confidence(incident, dedup_key)
+            incident.timeline = self.build_timeline(dedup_key)
+            return incident, dedup_key
+        return None, None
+
     def check_sql_injection(self, log: LogEntry) -> tuple[Incident | None, str | None]:
         if "sql" in log.message.lower() or "db_error" in (log.eventType or "") or "waf_alert" in (log.eventType or ""):
             if "or 1=1" in log.message.lower() or "union select" in log.message.lower() or "syntax error near" in log.message.lower():
@@ -406,6 +432,7 @@ class IncidentEngine:
             ("container_restart", self.check_container_restart),
             ("sql_injection", self.check_sql_injection),
             ("cryptomining", self.check_cryptomining),
+            ("benign_activity", self.check_benign_activity),
         ]
 
         for name, check in checks:

@@ -10,15 +10,15 @@ def main():
     
     print("2. Brute Force Attack")
     subprocess.run(["python3", "scripts/simulate_brute_force.py"])
-    time.sleep(2)
+    time.sleep(15)
     
     print("3. Attack Chain")
     subprocess.run(["python3", "scripts/simulate_attack_chain.py"])
-    time.sleep(2)
+    time.sleep(15)
     
     print("4. SQL Injection")
     subprocess.run(["python3", "scripts/simulate_sql_injection.py"])
-    time.sleep(2)
+    time.sleep(15)
     
     print("5. Cryptomining")
     subprocess.run(["python3", "scripts/simulate_cryptomining.py"])

@@ -1,33 +1,52 @@
 import json
-from langchain_core.messages import SystemMessage, HumanMessage
-from langgraph.prebuilt import create_react_agent
+from langchain_core.messages import AIMessage, ToolMessage
 from app.agents.state import InvestigationState
-from app.agents.llm import get_llm
 from app.agents.tools.log_tools import search_logs
-from app.agents.tools.incident_tools import get_incident, search_incidents
 
 def investigate_node(state: InvestigationState) -> dict:
-    llm = get_llm(temperature=0)
-    tools = [search_logs, get_incident, search_incidents]
+    incident = state.get("incident_snapshot", {})
+    details = incident.get("details", {})
+    ip = details.get("ip") or incident.get("sourceIp")
+    user_id = details.get("userId") or incident.get("userId")
+    service = incident.get("service")
     
-    agent = create_react_agent(llm, tools)
+    # Query parameters based on incident metadata
+    search_args = {}
+    if ip:
+        search_args["ip"] = ip
+    if user_id:
+        search_args["userId"] = user_id
+    if service and not ip:
+        svc = service.replace("ServiceName.", "").lower()
+        search_args["service"] = svc
+    search_args["limit"] = 50
     
-    sys_msg = SystemMessage(
-        content="You are an AI Security Investigator. Use tools to find logs and incidents to investigate "
-                "the current incident. Only gather factual evidence. Do NOT invent logs."
+    # Deterministic log search without burning unnecessary LLM calls
+    logs_json = search_logs.invoke(search_args)
+    try:
+        retrieved_logs = json.loads(logs_json)
+        if not isinstance(retrieved_logs, list):
+            retrieved_logs = []
+    except Exception:
+        retrieved_logs = []
+        
+    tool_call_id = "call_search_logs"
+    ai_msg = AIMessage(
+        content=f"Searching logs for security telemetry related to incident {incident.get('id', '')}...",
+        tool_calls=[{"name": "search_logs", "args": search_args, "id": tool_call_id}]
+    )
+    tool_msg = ToolMessage(
+        name="search_logs",
+        content=logs_json,
+        tool_call_id=tool_call_id
+    )
+    summary_msg = AIMessage(
+        content=f"Log investigation complete. Retrieved {len(retrieved_logs)} log events matching criteria {search_args}."
     )
     
-    incident_str = json.dumps(state["incident_snapshot"])
-    human_msg = HumanMessage(
-        content=f"Investigate the following incident:\n{incident_str}\n"
-                f"Identify source IPs, related logs, and relevant anomalies. "
-                f"Limit your search to gather sufficient evidence."
-    )
-    
-    result = agent.invoke({"messages": [sys_msg, human_msg]})
-    
-    # We store the final messages back so we can pass context forward if needed.
     return {
-        "messages": result["messages"],
+        "messages": [ai_msg, tool_msg, summary_msg],
+        "retrieved_logs": retrieved_logs,
         "step_count": state.get("step_count", 0) + 1
     }
+

@@ -38,8 +38,8 @@ async def ingest_logs(request: Request):
         incidents, alerts = engine.analyze(log)
         for inc in incidents:
             store.add_incident(inc)
-            # Trigger investigation for high priority incidents
-            if inc.severity in ["high", "critical"] and inc.state.value == "open":
+            # Trigger investigation for all incidents
+            if inc.state.value == "open":
                 from app.agents.runner import runner
                 runner.start_investigation(inc.id)
         for alert in alerts:

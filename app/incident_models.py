@@ -28,6 +28,7 @@ class IncidentType(str, Enum):
     SQL_INJECTION = "sql_injection"
     CRYPTOMINING = "cryptomining"
     SECURITY_ALERT = "security_alert"
+    BENIGN_ACTIVITY = "benign_activity"
 
 
 class TimelineEntry(BaseModel):

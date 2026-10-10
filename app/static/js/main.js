@@ -94,9 +94,7 @@ class AppState {
           aiList.innerHTML = `
             <div class="absolute inset-0 flex items-center justify-center text-gray-500 font-mono text-sm">
               <div class="flex flex-col items-center gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div class="h-6 w-6 rounded flex items-center justify-center bg-brand-glow text-brand-base animate-pulse">
-                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
+                <div class="h-6 w-6 rounded-full border-2 border-brand-base border-t-transparent animate-spin"></div>
                 <p class="tracking-widest uppercase text-xs font-bold text-gray-400">Initializing Context...</p>
               </div>
             </div>

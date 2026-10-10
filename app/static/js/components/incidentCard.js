@@ -5,8 +5,8 @@ export function createIncidentCard(i, isSelected) {
   
   const baseClasses = 'cursor-pointer p-4 rounded-xl border transition-all duration-200 select-none bg-white';
   const stateClasses = isSelected 
-    ? 'border-brand-base shadow-[0_0_0_1px_rgba(26,115,232,1)] bg-brand-glow/20' 
-    : 'border-transparent hover:border-gray-300 hover:shadow-sm shadow-[0_1px_2px_rgba(0,0,0,0.05)]';
+    ? 'border-brand-base bg-blue-50/30 shadow-sm' 
+    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm shadow-sm';
 
   return `
     <div onclick="window.appState.selectIncident('${esc(i.id)}')" class="${baseClasses} ${stateClasses}">

@@ -36,3 +36,9 @@ class ResponseProposal(BaseModel):
     justification: str
     rollback_plan: str
     requires_approval: bool = True
+
+
+class InvestigationOutcome(BaseModel):
+    verdict: Verdict
+    response_proposal: Optional[ResponseProposal] = None
+

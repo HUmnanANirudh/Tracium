@@ -29,6 +29,18 @@ def main():
             "ip": "203.0.113.200",
             "eventType": "page_view"
         })
+        
+    # Normal backend traffic with latency
+    for i in range(10):
+        logs.append({
+            "service": "backend",
+            "level": "info",
+            "timestamp": datetime.fromtimestamp(base_time + i*2, tz=timezone.utc).isoformat(),
+            "message": f"Processed API request",
+            "ip": "203.0.113.200",
+            "latencyMs": 45.5 + i,
+            "eventType": "api_request"
+        })
 
     with httpx.Client(base_url="http://localhost:8000") as client:
         response = client.post("/logs/ingest", json={"logs": logs})

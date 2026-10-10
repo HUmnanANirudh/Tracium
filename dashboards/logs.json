@@ -430,7 +430,7 @@
         }
       },
       "title": "Live Log Stream",
-      "type": "timeseries",
+      "type": "logs",
       "targets": [
         {
           "datasource": {

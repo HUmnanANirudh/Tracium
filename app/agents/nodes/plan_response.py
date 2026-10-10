@@ -5,7 +5,16 @@ from app.agents.llm import get_llm
 from app.agents.models import ResponseProposal
 
 def plan_response_node(state: InvestigationState) -> dict:
-    # Read playbooks
+    # If proposal was already generated during the unified verdict step, reuse it (0 LLM calls!)
+    if state.get("response_proposal") is not None:
+        return {"step_count": state.get("step_count", 0) + 1}
+        
+    verdict = state.get("verdict")
+    if verdict and verdict.classification == "false_positive":
+        # Do not propose response for false positives (0 LLM calls!)
+        return {"response_proposal": None, "step_count": state.get("step_count", 0) + 1}
+    
+    # Fallback if proposal wasn't planned during verdict step
     playbooks = ""
     playbooks_dir = os.getenv("PLAYBOOKS_DIR", "data/playbooks")
     if os.path.exists(playbooks_dir):
@@ -16,12 +25,7 @@ def plan_response_node(state: InvestigationState) -> dict:
 
     llm = get_llm(temperature=0)
     structured_llm = llm.with_structured_output(ResponseProposal)
-    
-    verdict = state.get("verdict")
-    if verdict and verdict.classification == "false_positive":
-        # Do not propose response for false positives
-        return {"response_proposal": None, "step_count": state.get("step_count", 0) + 1}
-    
+
     sys_msg = SystemMessage(
         content="You are a security responder. Based on the incident verdict and the provided playbooks, "
                 "propose a containment response action. Pick exactly ONE action from the playbook that best fits.\n"
